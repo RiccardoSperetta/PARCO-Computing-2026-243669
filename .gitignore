@@ -1,0 +1,9 @@
+# compiled binaries
+*.out
+
+# data files and large preprocessed outputs
+/data/
+
+# temporary/editor files
+*.tmp
+.vscode/

@@ -23,13 +23,16 @@ int compare_by_row(const void *a, const void *b) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s file.mtx\n", argv[0]);
+        fprintf(stderr, "Usage: %s matrix_name\n", argv[0]);
         return 1;
     }
 
+    char* matrix_name = argv[1];
+
+//SETUP ===========================
     //builds full file path:
     char input_path[256];
-    snprintf(input_path, sizeof(input_path), "data/raw/%s", argv[1]);
+    snprintf(input_path, sizeof(input_path), "data/raw/%s.mtx", matrix_name);
 
     FILE *fp = fopen(input_path, "r");
     if (!fp) {
@@ -87,16 +90,19 @@ int main(int argc, char* argv[]) {
     //SORTING matrix by ROWS:
     qsort(matrix, nnz, sizeof(Triplet), compare_by_row);
 
-    // fill the array of pointers to the start of each row:
+    // once matrix is sorted: fill the array of pointers to the start of each row:
     long prevRow = 0;
     for(long i=0; i<nnz; i++) {
-        long nextRow = matrix[i].row;
+        long nextRow = matrix[i].row; //remember from above: here I have the row index + 1 (still from the .mtx format)
         if(nextRow>prevRow) {
+            //if I'm jumping multiple rows I fill them with the previous value
+            //= all those rows contain 0 elements
             for(long j=prevRow+1; j<=nextRow; j++){
                 RowPtr[j] = RowPtr[prevRow];
             }
         }
         RowPtr[nextRow]++;
+        //fillign Acol and Aval is straight forward
         Acol[i] = matrix[i].col;
         Aval[i] = matrix[i].val;
 
@@ -106,25 +112,26 @@ int main(int argc, char* argv[]) {
     free(matrix);
 
 //STORING PROCESSED MATRIX ================================
-    //removing the .mtx:
-    char basename[256];
-    snprintf(basename, sizeof(basename), "%s", argv[1]);
-    char *dot = strrchr(basename, '.');
-    if (dot) *dot = '\0'; 
-
     //creating path for processed matrix data:
     char rowptr_path[PATH_MAX], col_path[PATH_MAX], val_path[PATH_MAX];
-    snprintf(rowptr_path, sizeof(rowptr_path), "data/processed/%s/rowptr.bin", basename);
-    snprintf(col_path, sizeof(col_path), "data/processed/%s/col.bin", basename);
-    snprintf(val_path, sizeof(val_path), "data/processed/%s/val.bin", basename);
+    snprintf(rowptr_path, sizeof(rowptr_path), "data/processed/%s/rowptr.bin", matrix_name);
+    snprintf(col_path, sizeof(col_path), "data/processed/%s/col.bin", matrix_name);
+    snprintf(val_path, sizeof(val_path), "data/processed/%s/val.bin", matrix_name);
 
-    //opening in write mode the paths:
+
+    // opening in write mode the paths, 
+    // will create the files if they don't exist already, and overwrite them otherwise:
     FILE *fp_rowptr = fopen(rowptr_path, "wb");
     FILE *fp_col = fopen(col_path, "wb");
     FILE *fp_val = fopen(val_path, "wb");
 
+    //if something went wrong:
     if (!fp_rowptr || !fp_col || !fp_val) {
         perror("fopen output files");
+        // Close any that succeeded
+        if (fp_rowptr) fclose(fp_rowptr);
+        if (fp_col) fclose(fp_col);
+        if (fp_val) fclose(fp_val);
         return 1;
     }
 

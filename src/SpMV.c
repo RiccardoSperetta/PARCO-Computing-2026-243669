@@ -115,6 +115,7 @@ int main(int argc, char* argv[]) {
     GET_TIME(finish);
 #endif
     double elapsed = finish-start;
+    printf("%e\n", elapsed);
 
 // DEBUG PRINT ==========================
 #ifdef DEBUG

@@ -3,6 +3,8 @@
 
 # data files and large preprocessed outputs
 /data/
+/results/
+/plots/
 
 # temporary/editor files
 *.tmp

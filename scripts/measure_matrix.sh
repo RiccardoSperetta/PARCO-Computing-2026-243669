@@ -10,6 +10,8 @@ MATRIX=$1
 PROCESSED_DIR="data/processed/${MATRIX}"
 RESULTS_BASE="results/${MATRIX}"
 
+echo "[BENCHMARK] $MATRIX"
+
 # Check if processed data exists
 if [ ! -f "${PROCESSED_DIR}/rowptr.bin" ] || \
    [ ! -f "${PROCESSED_DIR}/col.bin" ] || \
@@ -18,7 +20,6 @@ if [ ! -f "${PROCESSED_DIR}/rowptr.bin" ] || \
     exit 1
 fi
 
-echo "=== Benchmarking $MATRIX ==="
 
 # ======================================================================
 # BENCHMARK SEQUENTIAL CODE: ===========================================
@@ -28,7 +29,7 @@ SEQUENTIAL_FLAGS="--std=c11 -Wall src/SpMV.c -o spmv.out"
 OPT_LEVELS=("O0" "O1" "O2" "O3" "Ofast")
 
 for opt in "${OPT_LEVELS[@]}"; do
-    echo "- running $MATRIX - sequential with $opt -"
+    echo "  - running $MATRIX - sequential with -$opt -"
     RESULTS_DIR="${RESULTS_BASE}/sequential/${opt}"
     mkdir -p "$RESULTS_DIR"
     
@@ -54,7 +55,7 @@ for opt in "${OPT_LEVELS[@]}"; do
             >> "${RESULTS_DIR}/perf.txt"
     done
     
-        echo "- done $MATRIX - sequential with $opt -"
+        echo "  - done $MATRIX - sequential with -$opt -"
 done
 
 # ======================================================================
@@ -89,7 +90,7 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
             # Compile
             gcc ${PARALLEL_FLAGS}
 
-            echo "- running $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"            
+            echo "  - running $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"            
             # === 1. Time measurements (10 runs) ===
             > "${RESULTS_DIR}/time.txt"  # Clear file first
             
@@ -109,7 +110,7 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
                     >> "${RESULTS_DIR}/perf.txt"
             done
 
-            echo "- done $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"
+            echo "  - done $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"
             echo ""
         done # chunksizes change done
 
@@ -118,11 +119,8 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
     threads=$((threads * 2)) #doubling the amount of threads every time, 
 done # number of threads change done
 
+echo "  [OK]"
 
 
 # Cleanup executable
 rm spmv.out
-
-echo "=== Benchmarking complete for $MATRIX ==="
-echo "Results saved in: results/$MATRIX/"
-

@@ -13,21 +13,24 @@ MATRIX=$1
 RAW_FILE="data/raw/${MATRIX}.mtx"
 PROCESSED_DIR="data/processed/${MATRIX}"
 
+echo "[PROCESS] $MATRIX"
+
+
 if [ ! -f "$RAW_FILE" ]; then
-    echo "[ERROR] Raw file not found: $RAW_FILE, must download it first"
+    echo "  [ERROR] Raw file not found: $RAW_FILE, must download it first"
     exit 1
 fi
 
+# if matrix has already been procesed
 if [ -f "${PROCESSED_DIR}/rowptr.bin" ] && \
    [ -f "${PROCESSED_DIR}/col.bin" ] && \
    [ -f "${PROCESSED_DIR}/val.bin" ]; then
-    echo "[SKIP] $MATRIX - already processed"
+    echo "  [SKIP] $MATRIX - already processed"
     exit 0
 fi
 
-echo "[PROCESS] $MATRIX"
-
 mkdir -p "$PROCESSED_DIR"
+# compilation
 gcc --std=c11 -O3 src/matrix_processing.c -o src/matrix_processing.out
 
 if ./src/matrix_processing.out "${MATRIX}"; then

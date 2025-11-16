@@ -6,12 +6,15 @@
 
 long ROWS, COLS, nnz;
 
+// data will be stored directly in a triplet
 typedef struct {
     long row;
     long col;
     double val;
 } Triplet;
 
+// -> easier ordering
+// function to pass as an argument to qsort: how to order a matrix
 int compare_by_row(const void *a, const void *b) {
     const Triplet *t1 = (const Triplet *)a;
     const Triplet *t2 = (const Triplet *)b;
@@ -29,7 +32,8 @@ int main(int argc, char* argv[]) {
 
     char* matrix_name = argv[1];
 
-//SETUP ===========================
+/*  ======= SETUP =============================================
+    =========================================================== */
     //builds full file path:
     char input_path[256];
     snprintf(input_path, sizeof(input_path), "data/raw/%s.mtx", matrix_name);
@@ -41,23 +45,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    //variables in order to read from file correctly
     char *line = NULL;
     size_t len = 0;
     long nread;
+    bool matrix_data = true;
+    long iteration = 0;
 
+    //arrays to be filled: full matrix and the 3 separate CSR arrays to compute
     Triplet* matrix;
     long* RowPtr;
     long* Acol;
     double* Aval;
 
-    bool matrix_data = true;
-    long iteration = 0;
 
-//EXTRACT MATRIX ================================
+/*  ======= EXTRACT MATRIX ====================================
+    =========================================================== */
     while ((nread = getline(&line, &len, fp)) != -1) {
-        /* skip comment lines starting with '%' */
+        // skip comment lines starting with '%'
         if (nread > 0 && line[0] == '%') continue;
-        /* get the general data of the matrix */
+        // get the general data of the matrix
         if (matrix_data) {
             if (sscanf(line, "%ld %ld %ld", &ROWS, &COLS, &nnz) == 3) {
                 matrix = (Triplet*) malloc(nnz*sizeof(Triplet));
@@ -69,7 +76,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            matrix_data = false;
+            matrix_data = false; //once found, look for the matrix contents:
         } 
         //fill the matrix
         else {
@@ -77,7 +84,7 @@ int main(int argc, char* argv[]) {
             sscanf(line, "%ld %ld %lf", &t.row, &t.col, &t.val);
             //because indexes are 1 based:
             t.col--;
-            //not doing t.row-- for simplicity in CSR computation
+            //not doing t.row--: makes the CSR computation easier
             matrix[iteration] = t;
             iteration++;
         }
@@ -86,17 +93,19 @@ int main(int argc, char* argv[]) {
     free(line);
     fclose(fp);
 
-//BUILDING CSR ================================
+
+/*  ======= BUILDING CSR ======================================
+    =========================================================== */
     //SORTING matrix by ROWS:
     qsort(matrix, nnz, sizeof(Triplet), compare_by_row);
 
-    // once matrix is sorted: fill the array of pointers to the start of each row:
+    // fill the array of pointers to the start of each row:
     long prevRow = 0;
     for(long i=0; i<nnz; i++) {
-        long nextRow = matrix[i].row; //remember from above: here I have the row index + 1 (still from the .mtx format)
+        long nextRow = matrix[i].row; //remember from above: here I have the row index + 1 (= the pointer for the start of the next row)
         if(nextRow>prevRow) {
             //if I'm jumping multiple rows I fill them with the previous value
-            //= all those rows contain 0 elements
+            //= all those rows start and finish at the same index = contain 0 elements
             for(long j=prevRow+1; j<=nextRow; j++){
                 RowPtr[j] = RowPtr[prevRow];
             }
@@ -111,7 +120,9 @@ int main(int argc, char* argv[]) {
 
     free(matrix);
 
-//STORING PROCESSED MATRIX ================================
+
+/*  ======= STORING CSR =======================================
+    =========================================================== */
     //creating path for processed matrix data:
     char rowptr_path[PATH_MAX], col_path[PATH_MAX], val_path[PATH_MAX];
     snprintf(rowptr_path, sizeof(rowptr_path), "data/processed/%s/rowptr.bin", matrix_name);
@@ -149,7 +160,9 @@ int main(int argc, char* argv[]) {
     fclose(fp_col);
     fclose(fp_val);
 
-//FINAL FREES ================================
+
+/*  ======= FINAL FREES =======================================
+    =========================================================== */
     free(RowPtr);
     free(Acol);
     free(Aval);

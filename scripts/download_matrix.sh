@@ -8,7 +8,7 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
-BASE_URL="https://suitesparse-collection-website.herokuapp.com/MM"  
+BASE_URL="https://suitesparse-collection-website.herokuapp.com/MM" # from SuiteSparse Matrix Collection
 
 MATRIX=$1
 GROUP=$2
@@ -25,7 +25,7 @@ fi
 
 echo "[DOWNLOAD] $MATRIX (group: $GROUP)"
 
-# Download from https://sparse.tamu.edu/:
+# builds temporary compressed file location
 TEMP_TAR="data/raw/temp_${MATRIX}.tar.gz"
 if ! wget -q -O "$TEMP_TAR" "${BASE_URL}/${GROUP}/${MATRIX}.tar.gz"; then
     echo "  [ERROR] Download failed"
@@ -33,19 +33,19 @@ if ! wget -q -O "$TEMP_TAR" "${BASE_URL}/${GROUP}/${MATRIX}.tar.gz"; then
     exit 1
 fi
 
-# Extract to temp directory
+# Extract and decompress to temp directory
 TEMP_DIR="data/raw/temp_${MATRIX}"
 mkdir -p "$TEMP_DIR"
 tar -xzf "$TEMP_TAR" -C "$TEMP_DIR"
 
-# Find .mtx file
+# Find .mtx file location inside this directory
 MTX_FOUND=$(find "$TEMP_DIR" -name "*.mtx" -o -name "*.MTX" | head -1)
 
 # If found, places it into data/raw/${MATRIX} = $MTX_FILE
 if [ -n "$MTX_FOUND" ]; then
     mv "$MTX_FOUND" "$MTX_FILE"
     echo "  [OK]"
-else
+else # otherwise, there was a problem with the downloaded contents
     echo "  [ERROR] No .mtx file found"
     echo "  Contents:"
     ls -la "$TEMP_DIR"

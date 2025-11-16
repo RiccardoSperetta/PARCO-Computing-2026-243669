@@ -3,7 +3,7 @@ set -e
 
 source "$(dirname "$0")/matrix_list.sh"
 
-echo "=== Measuring matrices ==="
+echo "[ Measuring matrices ]"
 
 #pointless to run if no matrix has been processed yet
 if [ ! -d "data/processed" ]; then
@@ -21,4 +21,4 @@ for matrix in "${!MATRIX_INFO[@]}"; do
     ./scripts/measure_matrix.sh "$matrix"
 done
 
-echo "=== Measuring complete ==="
+echo "[ Measuring complete ]"

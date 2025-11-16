@@ -5,8 +5,8 @@ source "$(dirname "$0")/matrix_list.sh"
 
 echo "=== Processing matrices ==="
 
-if [ ! -f "src/matrix_processing.out" ]; then
-    echo "[ERROR] process_matrix executable not found"
+if [ ! -f "src/matrix_processing.c" ]; then
+    echo "[ERROR] process_matrix program not found"
     exit 1
 fi
 

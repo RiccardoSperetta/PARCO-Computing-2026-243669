@@ -3,12 +3,17 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "timer.h" //header with time measurement tools
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-#include "timer.h"
+# ifdef DEBUG
+void print_parallel_info(void); //debug print
+# endif
 
+// matrix sizes: rows, columns, number of non-zero elements
 long ROWS, COLS, nnz;
 
 
@@ -20,8 +25,10 @@ int main(int argc, char* argv[]) {
 
     char *matrix_name = argv[1];
 
-// INIT - TODO: move into init.h
-    // Build paths to the binary files
+/*  ======= INITIALIZATION ====================================
+    =========================================================== */
+    // Build paths to the binary files, 
+    // representing the 3 vectors that will be used in the multiplication based on CSR 
     char rowptr_path[PATH_MAX];
     char col_path[PATH_MAX];
     char val_path[PATH_MAX];
@@ -34,19 +41,18 @@ int main(int argc, char* argv[]) {
     FILE *fp_col = fopen(col_path, "rb");
     FILE *fp_val = fopen(val_path, "rb");
 
-    if (!fp_rowptr || !fp_col || !fp_val) {
+    if (!fp_rowptr || !fp_col || !fp_val) { //if anything goes wrong
         perror("fopen input files");
         return 1;
     }
 
     //initialization of sizes:
-    fread(&ROWS, sizeof(long), 1, fp_rowptr);
-    fread(&COLS, sizeof(long), 1, fp_col);
-    fread(&nnz, sizeof(long), 1, fp_val);
-#ifdef DEBUG
-    printf("%ld %ld %ld\n", ROWS, COLS, nnz);
-#endif
-
+    //ASSUMPTION: no error handling since files are expected to be built with matrix_processing.c
+    long trash;
+    trash = fread(&ROWS, sizeof(long), 1, fp_rowptr);
+    trash = fread(&COLS, sizeof(long), 1, fp_col);
+    trash = fread(&nnz, sizeof(long), 1, fp_val);
+    
     //RowPtr initialization:
     long *RowPtr = malloc((ROWS+1) * sizeof(long));
     if (!RowPtr) {
@@ -55,7 +61,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    fread(RowPtr, sizeof(long), ROWS+1, fp_rowptr);
+    trash = fread(RowPtr, sizeof(long), ROWS+1, fp_rowptr);
     fclose(fp_rowptr);
 
     //Acol initialization:
@@ -67,7 +73,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    fread(Acol, sizeof(long), nnz, fp_col);
+    trash = fread(Acol, sizeof(long), nnz, fp_col);
     fclose(fp_col);
 
     //Aval initialization:
@@ -80,52 +86,58 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    fread(Aval, sizeof(double), nnz, fp_val);
+    trash = fread(Aval, sizeof(double), nnz, fp_val);
     fclose(fp_val);
 
 
-    //vector(to multiply the matrix with) and result vector initialization:
+    double now;
+    GET_TIME(now);
+    srand(now);     //simple randomization based on time
+
+    //VECTOR to multiply the matrix with
     double* vector = malloc(COLS*sizeof(double));
     for (long i = 0; i<COLS; i++) {
-        vector[i] = 1.; //TODO: randomize!
+        #ifdef DEBUG
+            vector[i] = 1.;         //easier to debug
+        #else
+            vector[i] = rand()%100; //more varied multiplications
+        #endif
     }
+
+    //RESULT VECTOR of matrix x vector, all initialized with 0s
     double* result = calloc(COLS, sizeof(double));
 
 
-//SpMV WITH CSR ================================
+
+/*  ======= MATRIX VECTOR MULTIPLICATION ======================
+    =========================================================== */
     double start, finish;
 
     //multiplication: either with sequential or parallel code:
+    GET_TIME(start);
 #ifdef _OPENMP
-    GET_TIME(start);
-#   pragma omp parallel for
+#   pragma omp parallel for schedule(runtime) //schedule is determined at compile time
+#endif 
     for (long i=0; i<ROWS; i++) {
         for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
             result[i] += Aval[j] * vector[Acol[j]];
         }
     }
     GET_TIME(finish);
-#else 
-    GET_TIME(start);
-    for (long i=0; i<ROWS; i++) {
-        for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
-            result[i] += Aval[j] * vector[Acol[j]];
-        }
-    }
-    GET_TIME(finish);
-#endif
+
     double elapsed = finish-start;
     printf("%e\n", elapsed);
 
-// DEBUG PRINT ==========================
+
+/*  ======= DEBUG PRINTS ======================================
+    =========================================================== */
 #ifdef DEBUG
     #ifdef _OPENMP
         printf("parallel code running...\n");
+        print_parallel_info();
     #else
         printf("sequential code running...\n");
     #endif
-
-    printf("Elapsed time = %e seconds\n", elapsed);
 
     //just for checking the first 10 elements
     for(long i=0; i<10; i++) {
@@ -134,7 +146,9 @@ int main(int argc, char* argv[]) {
     printf("\n");
 #endif
 
-// FINAL FREES ==========================
+
+/*  ======= FINAL FREES =======================================
+    =========================================================== */
     free(RowPtr);
     free(Acol);
     free(Aval);
@@ -144,3 +158,46 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+
+/*  ======= end of main =======================================
+    =========================================================== */
+
+
+// debugging function: prints the schedule and chunksize being utilized:
+#ifdef _OPENMP
+void print_parallel_info(void) {
+    omp_sched_t kind;
+    int chunk_size;
+    omp_get_schedule(&kind, &chunk_size);
+    
+    //printf("%d\n", kind);
+    char* modifier;
+    if((kind & 0x80000000) != 0) {
+        modifier = "monotonic";
+        kind = kind & 0x7FFFFFFF;  // Mask off the monotonic bit
+    } else {
+        modifier = "nonmonotonic";
+    }
+
+    // Match it
+    const char *kind_str;
+    if (kind == omp_sched_static) {
+        kind_str = "static";
+    } else if (kind == omp_sched_dynamic) {
+        kind_str = "dynamic";
+    } else if (kind == omp_sched_guided) {
+        kind_str = "guided";
+    } else if (kind == omp_sched_auto) {
+        kind_str = "auto";
+    } else {
+        kind_str = "UNKNOWN";
+    }
+    
+    printf("CORES: %d; THREADS: %d; SCHEDULE: %s:%s; ", omp_get_num_procs(), omp_get_max_threads(), modifier, kind_str);
+    if (chunk_size > 0)
+        printf("CHUNKSIZE: %d\n", chunk_size);
+    else
+        printf("default chunk size (implementation-defined)\n");
+}
+#endif

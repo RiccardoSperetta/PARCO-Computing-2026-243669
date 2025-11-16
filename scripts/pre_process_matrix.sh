@@ -28,8 +28,9 @@ fi
 echo "[PROCESS] $MATRIX"
 
 mkdir -p "$PROCESSED_DIR"
+gcc --std=c11 -O3 src/matrix_processing.c -o src/matrix_processing.out
 
-if ./src/matrix_processing.out "${MATRIX}.mtx"; then
+if ./src/matrix_processing.out "${MATRIX}"; then
     echo "  [OK]"
 else
     echo "  [ERROR] Processing failed"

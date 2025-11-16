@@ -2,9 +2,9 @@
 *.out
 
 # data files and large preprocessed outputs
-/data/
-/results/
-/plots/
+/data/*
+/results/*
+/plots/*
 
 # temporary/editor files
 *.tmp

@@ -1,0 +1,53 @@
+#!/bin/bash
+#PBS -N matrix_pipeline
+#PBS -l select=1:ncpus=16:mem=16gb
+#PBS -l walltime=04:00:00
+#PBS -q short_cpuQ
+#PBS -o pipeline_output.txt
+#PBS -e pipeline_error.txt
+
+# Go to submission directory
+cd $PBS_O_WORKDIR
+
+echo "=================================================="
+echo "Matrix Processing Pipeline"
+echo "=================================================="
+echo "Job ID: $PBS_JOBID"
+echo "Running on: $(hostname)"
+echo "Started at: $(date)"
+echo "Working directory: $(pwd)"
+echo "Allocated CPUs: ${PBS_NUM_PPN:-unknown}"
+echo "=================================================="
+echo ""
+
+# Step 1: Download matrices
+echo "=== Step 1: Downloading matrices ==="
+./scripts/download_list.sh
+if [ $? -ne 0 ]; then
+    echo "ERROR: Download failed"
+    exit 1
+fi
+echo ""
+
+# Step 2: Preprocess matrices
+echo "=== Step 2: Preprocessing matrices ==="
+./scripts/pre_process_list.sh
+if [ $? -ne 0 ]; then
+    echo "ERROR: Preprocessing failed"
+    exit 1
+fi
+echo ""
+
+# Step 3: Benchmark matrices
+echo "=== Step 3: Benchmarking matrices ==="
+./scripts/measure_list.sh
+if [ $? -ne 0 ]; then
+    echo "ERROR: Benchmarking failed"
+    exit 1
+fi
+echo ""
+
+echo "=================================================="
+echo "Pipeline completed successfully"
+echo "Finished at: $(date)"
+echo "=================================================="

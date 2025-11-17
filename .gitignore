@@ -2,9 +2,14 @@
 *.out
 
 # data files and large preprocessed outputs
-/data/*
-/results/*
-/plots/*
+data/*
+results/*
+plots/*
+
+# don't ignore placeholder files (to keep directories in Git)
+!data/.gitkeep
+!results/.gitkeep
+!plots/.gitkeep
 
 # temporary/editor files
 *.tmp

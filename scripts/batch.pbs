@@ -1,7 +1,6 @@
 #!/bin/bash
 #PBS -N matrix_pipeline
-#PBS -l select=1:ncpus=16
-#PBS -l mem=16gb
+#PBS -l select=1:ncpus=64:mem=64gb
 #PBS -l walltime=04:00:00
 #PBS -q short_cpuQ
 #PBS -o pipeline_output.txt

@@ -1,6 +1,6 @@
 /* File:     timer.h
  *
- * Purpose:  Define a macro that returns the number of seconds that 
+ * Purpose:  Define a macro that returns the number of milliseconds that 
  *           have elapsed since some point in the past.  The timer
  *           should return times with microsecond accuracy.
  *
@@ -18,7 +18,7 @@
  *    . . .
  *    GET_TIME(finish);
  *    elapsed = finish - start;
- *    printf("The code to be timed took %e seconds\n", elapsed);
+ *    printf("The code to be timed took %e milliseconds\n", elapsed);
  *
  * IPP:  Section 3.6.1 (pp. 121 and ff.) and Section 6.1.2 (pp. 273 and ff.)
  */
@@ -31,7 +31,7 @@
 #define GET_TIME(now) { \
    struct timeval t; \
    gettimeofday(&t, NULL); \
-   now = t.tv_sec + t.tv_usec/1000000.0; \
-}
+   now = t.tv_sec*1000.0 + t.tv_usec/1000.0; \
+} // = time in milliseconds
 
 #endif

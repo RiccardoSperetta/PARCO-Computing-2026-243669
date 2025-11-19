@@ -92,6 +92,7 @@ reading from the previous results, the Python script will compute different plot
 
 
 ## 2. Compilation
+Compiler version and flags
 TODO
 
 
@@ -101,6 +102,10 @@ TODO
 
 
 ## 4. Input Data
+BRIEF explanation of input and output
+PLUS Description of what we need to modify to change the parameters (matrix sizes,
+number of threads/CPUs) and default values
+
 This project uses the following matrices from the SuiteSparse Matrix Collection:
 
 - still to decide definitely
@@ -116,7 +121,10 @@ what parameters actually?
 
 
 ## 6. Cluster Notes
-TODO
+Cluster-specific notes (modules, queues)
+- perf: module load perf
+- short_cpuQ
+
 
 
 ## 7. Reproducibility and Data

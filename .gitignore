@@ -14,3 +14,4 @@ plots/*
 # temporary/editor files
 *.tmp
 .vscode/
+venv/

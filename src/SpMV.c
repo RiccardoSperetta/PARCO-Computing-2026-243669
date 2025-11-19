@@ -119,9 +119,11 @@ int main(int argc, char* argv[]) {
 #   pragma omp parallel for schedule(runtime) //schedule is determined at compile time
 #endif 
     for (long i=0; i<ROWS; i++) {
+        double sum = 0;
         for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
-            result[i] += Aval[j] * vector[Acol[j]];
+            sum += Aval[j] * vector[Acol[j]];
         }
+        result[i] = sum;
     }
     GET_TIME(finish);
 

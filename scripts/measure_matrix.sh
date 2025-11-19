@@ -47,12 +47,10 @@ for opt in "${OPT_LEVELS[@]}"; do
     > "${RESULTS_DIR}/perf.txt"  # Clear file first
     
     for i in {1..10}; do
-        perf stat -e cache-misses,cache-references \
-            ./spmv.out "$MATRIX" 2>&1 | \
-            awk '/cache-misses/ {gsub(/,/, "", $1); misses=$1} 
-                /cache-references/ {gsub(/,/, "", $1); refs=$1} 
-                END {if (refs > 0) printf "%.4f\n", (misses/refs)*100}' \
-            >> "${RESULTS_DIR}/perf.txt"
+        perf stat -e L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses ./spmv.out "$MATRIX" 2>&1 \
+            | egrep 'L1-dcache-load-misses|LLC-load-misses' \
+            | grep -oP '\d+\.\d+(?=%)' \
+            | paste -sd' ' - >> "${RESULTS_DIR}/perf.txt"
     done
     
         echo "  - done $MATRIX - sequential with -$opt -"
@@ -102,12 +100,10 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
             > "${RESULTS_DIR}/perf.txt"  # Clear file first
             
             for i in {1..10}; do
-                perf stat -e cache-misses,cache-references \
-                    ./spmv.out "$MATRIX" 2>&1 | \
-                    awk '/cache-misses/ {gsub(/,/, "", $1); misses=$1} 
-                        /cache-references/ {gsub(/,/, "", $1); refs=$1} 
-                        END {if (refs > 0) printf "%.4f\n", (misses/refs)*100}' \
-                    >> "${RESULTS_DIR}/perf.txt"
+                perf stat -e L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses ./spmv.out "$MATRIX" 2>&1 \
+                    | egrep 'L1-dcache-load-misses|LLC-load-misses' \
+                    | grep -oP '\d+\.\d+(?=%)' \
+                    | paste -sd' ' - >> "${RESULTS_DIR}/perf.txt"
             done
 
             echo "  - done $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"

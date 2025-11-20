@@ -113,23 +113,27 @@ int main(int argc, char* argv[]) {
     =========================================================== */
     double start, finish;
 
-    //multiplication: either with sequential or parallel code:
-    GET_TIME(start);
-#ifdef _OPENMP
-#   pragma omp parallel for schedule(runtime) //schedule is determined at compile time
-#endif 
-    for (int i=0; i<ROWS; i++) {
-        double sum = 0.0;
-        for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
-            sum += Aval[j] * vector[Acol[j]];
+    // multiple iterations in order to measure warm cache behavior
+    for (int i = 0; i<11; i++) {
+        //multiplication: either with sequential or parallel code:
+        GET_TIME(start);
+    #ifdef _OPENMP
+    #   pragma omp parallel for schedule(runtime) //schedule is determined at compile time
+    #endif 
+        for (int i=0; i<ROWS; i++) {
+            double sum = 0.0;
+            for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
+                sum += Aval[j] * vector[Acol[j]];
+            }
+            result[i] = sum;
         }
-        result[i] = sum;
+        GET_TIME(finish);
+
+        if(i>0) { // cold start is ignored
+            double elapsed = finish-start;
+            printf("%e\n", elapsed);
+        }
     }
-    GET_TIME(finish);
-
-    double elapsed = finish-start;
-    printf("%e\n", elapsed);
-
 
 /*  ======= DEBUG PRINTS ======================================
     =========================================================== */

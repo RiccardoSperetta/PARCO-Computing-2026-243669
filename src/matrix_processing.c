@@ -4,12 +4,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-long ROWS, COLS, nnz;
+int ROWS, COLS, nnz;
 
 // data will be stored directly in a triplet
 typedef struct {
-    long row;
-    long col;
+    int row;
+    int col;
     double val;
 } Triplet;
 
@@ -48,14 +48,14 @@ int main(int argc, char* argv[]) {
     //variables in order to read from file correctly
     char *line = NULL;
     size_t len = 0;
-    long nread;
+    int nread;
     bool matrix_data = true;
-    long iteration = 0;
+    int iteration = 0;
 
     //arrays to be filled: full matrix and the 3 separate CSR arrays to compute
     Triplet* matrix;
-    long* RowPtr;
-    long* Acol;
+    int* RowPtr;
+    int* Acol;
     double* Aval;
 
 
@@ -66,11 +66,8 @@ int main(int argc, char* argv[]) {
         if (nread > 0 && line[0] == '%') continue;
         // get the general data of the matrix
         if (matrix_data) {
-            if (sscanf(line, "%ld %ld %ld", &ROWS, &COLS, &nnz) == 3) {
+            if (sscanf(line, "%d %d %d", &ROWS, &COLS, &nnz) == 3) {
                 matrix = (Triplet*) malloc(nnz*sizeof(Triplet));
-                RowPtr = (long*) malloc((ROWS+1)*sizeof(long));
-                Acol = (long*) malloc(nnz*sizeof(long));
-                Aval = (double*) malloc(nnz*sizeof(double));
             } else {
                 fprintf(stderr, "bad formatting of mtx file...\n");
                 return 1;
@@ -78,15 +75,20 @@ int main(int argc, char* argv[]) {
 
             matrix_data = false; //once found, look for the matrix contents:
         } 
-        //fill the matrix
+        
+        //fill the matrix: COO format
         else {
             Triplet t;
-            sscanf(line, "%ld %ld %lf", &t.row, &t.col, &t.val);
-            //because indexes are 1 based:
-            t.col--;
-            //not doing t.row--: makes the CSR computation easier
-            matrix[iteration] = t;
-            iteration++;
+            sscanf(line, "%d %d %lf", &t.row, &t.col, &t.val);
+            if (t.val == 0) {
+                nnz--; //some matrices also include "0" entries -> we ignore them 
+            } else {
+                //because indexes are 1 based:
+                t.col--;
+                //not doing t.row--: makes the CSR computation easier
+                matrix[iteration] = t;
+                iteration++;
+            }
         }
     }
 
@@ -99,14 +101,18 @@ int main(int argc, char* argv[]) {
     //SORTING matrix by ROWS:
     qsort(matrix, nnz, sizeof(Triplet), compare_by_row);
 
+    RowPtr = (int*) malloc((ROWS+1)*sizeof(int));
+    Acol = (int*) malloc(nnz*sizeof(int));
+    Aval = (double*) malloc(nnz*sizeof(double));
+
     // fill the array of pointers to the start of each row:
-    long prevRow = 0;
-    for(long i=0; i<nnz; i++) {
-        long nextRow = matrix[i].row; //remember from above: here I have the row index + 1 (= the pointer for the start of the next row)
+    int prevRow = 0;
+    for(int i=0; i<nnz; i++) {
+        int nextRow = matrix[i].row; //remember from above: here I have the row index + 1 (= the pointer for the start of the next row)
         if(nextRow>prevRow) {
             //if I'm jumping multiple rows I fill them with the previous value
             //= all those rows start and finish at the same index = contain 0 elements
-            for(long j=prevRow+1; j<=nextRow; j++){
+            for(int j=prevRow+1; j<=nextRow; j++){
                 RowPtr[j] = RowPtr[prevRow];
             }
         }
@@ -147,13 +153,13 @@ int main(int argc, char* argv[]) {
     }
 
     //writing down the data stored in arrays + matrix size values
-    fwrite(&ROWS, sizeof(long), 1, fp_rowptr);
-    fwrite(RowPtr, sizeof(long), ROWS + 1, fp_rowptr);
+    fwrite(&ROWS, sizeof(int), 1, fp_rowptr);
+    fwrite(RowPtr, sizeof(int), ROWS + 1, fp_rowptr);
 
-    fwrite(&COLS, sizeof(long), 1, fp_col);
-    fwrite(Acol, sizeof(long), nnz, fp_col);
+    fwrite(&COLS, sizeof(int), 1, fp_col);
+    fwrite(Acol, sizeof(int), nnz, fp_col);
 
-    fwrite(&nnz, sizeof(long), 1, fp_val);
+    fwrite(&nnz, sizeof(int), 1, fp_val);
     fwrite(Aval, sizeof(double), nnz, fp_val);
 
     fclose(fp_rowptr);

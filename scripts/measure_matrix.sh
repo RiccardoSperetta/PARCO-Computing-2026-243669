@@ -24,7 +24,7 @@ fi
 # ======================================================================
 # BENCHMARK SEQUENTIAL CODE: ===========================================
 # ======================================================================
-SEQUENTIAL_FLAGS="--std=c11 -Wall src/SpMV.c -o spmv.out"
+SEQUENTIAL_FLAGS="--std=c11 src/SpMV_iter.c -o spmv.out"
 
 OPT_LEVELS=("O0" "O1" "O2" "O3" "Ofast")
 
@@ -36,14 +36,14 @@ for opt in "${OPT_LEVELS[@]}"; do
     # Compile
     gcc ${SEQUENTIAL_FLAGS} -$opt 
     
-    # === 1. Time measurements (10 runs) ===
+    # === 1. Time measurements ===
     > "${RESULTS_DIR}/time.txt"  # Clear file first
     
     for i in {1..10}; do
         ./spmv.out "$MATRIX" >> "${RESULTS_DIR}/time.txt"  # APPEND
     done
     
-    # === 2. Perf cache misses (10 runs) ===
+    # === 2. Perf cache misses ===
     > "${RESULTS_DIR}/perf.txt"  # Clear file first
     
     for i in {1..10}; do
@@ -52,8 +52,8 @@ for opt in "${OPT_LEVELS[@]}"; do
             | grep -oP '\d+\.\d+(?=%)' \
             | paste -sd' ' - >> "${RESULTS_DIR}/perf.txt"
     done
-    
-        echo "  - done $MATRIX - sequential with -$opt -"
+
+    echo "  - done $MATRIX - sequential with -$opt -"
 done
 
 # ======================================================================
@@ -89,14 +89,14 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
             gcc ${PARALLEL_FLAGS}
 
             echo "  - running $MATRIX - parallel with $threads threads - ${sched} schedule - chunksize = ${chunk} -"            
-            # === 1. Time measurements (10 runs) ===
+            # === 1. Time measurements ===
             > "${RESULTS_DIR}/time.txt"  # Clear file first
             
             for i in {1..10}; do
                 ./spmv.out "$MATRIX" >> "${RESULTS_DIR}/time.txt"  # APPEND
             done
             
-            # === 2. Perf cache misses (10 runs) ===
+            # === 2. Perf cache misses ===
             > "${RESULTS_DIR}/perf.txt"  # Clear file first
             
             for i in {1..10}; do

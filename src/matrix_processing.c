@@ -103,9 +103,10 @@ int main(int argc, char* argv[]) {
 
 
     #ifdef DEBUG
-    printf("\nCOO matrix:\n*REMEMBER* - at this stage rows are 1 based\n");
+    printf("COO matrix:\n");
     for (int i = 0; i<20; i++) {
-        printf("%d %d %lf\n", matrix[i].row, matrix[i].col, matrix[i].val - 1.0);
+        //even if stored correctly, if a number is too small, it wont be printed simply with %lf
+        printf("%d %d %.15e\n", matrix[i].row - 1, matrix[i].col, matrix[i].val);
     }
     printf("...\n");    
     #endif

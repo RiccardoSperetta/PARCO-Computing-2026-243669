@@ -2,6 +2,5 @@
 
 # Shared matrix list for all scripts
 declare -A MATRIX_INFO=(
-    ["1138_bus"]="HB"
-    ["crankseg_2"]="GHS_psdef"
+    ["TSOPF_RS_b678_c2"]="TSOPF"
 )

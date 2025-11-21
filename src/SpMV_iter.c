@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     double* vector = malloc(COLS*sizeof(double));
     for (int i = 0; i<COLS; i++) {
         #ifdef DEBUG
-            vector[i] = rand()/1000000.0 + rand()%100; //more varied multiplications
+            vector[i] = 1.; //more varied multiplications
         #else
             vector[i] = rand()/1000000.0 + rand()%100; //more varied multiplications
         #endif
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
     }
     printf("\nAval: ");
     for(int i=0; i<10; i++) {
-        printf("%lf ", Aval[i]);
+        printf("%.15e ", Aval[i]);
     }
     printf("\nVECTOR: ");
     for(int i=0; i<10; i++) {

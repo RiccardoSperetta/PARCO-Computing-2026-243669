@@ -6,6 +6,17 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
+if [ -n "$PBS_JOBID" ] || [ -n "$SLURM_JOB_ID" ]; then
+    echo "Cluster environment detected."
+    gcc() { gcc-9.1.0 "$@"; }   # to make sure we're using the correct compiler version
+else 
+    echo "Local environment detected."
+    # correct compiler version responsibility is left to the user
+fi
+gcc --version
+perf --version
+echo ""
+
 MATRIX=$1
 PROCESSED_DIR="data/processed/${MATRIX}"
 RESULTS_BASE="results/${MATRIX}"

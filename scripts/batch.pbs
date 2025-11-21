@@ -17,15 +17,13 @@ echo "Running on: $(hostname)"
 echo "Started at: $(date)"
 echo "Working directory: $(pwd)"
 echo "Allocated CPUs: $(nproc)"
+echo "Node architecture: $(lscpu)"
 echo "=================================================="
 echo ""
 
 # Step 0: Load modules
-module load gcc91           # to make sure we're using the correct compiler version
-gcc () { gcc -9.1.0 "$@"; }
-gcc -- version  
-module load perf            #to later use in benchmarking
-
+module load gcc91           
+module load perf            
 
 # Step 1: Download matrices
 echo "=== Step 1: Downloading matrices ==="

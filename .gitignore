@@ -5,6 +5,9 @@
 data/*
 results/*
 plots/*
+scripts/plotting/_pycache_/*
+scripts/plotting/__pycache__/loaders.cpython-312.pyc
+scripts/plotting/__pycache__/summaries.cpython-312.pyc
 
 # don't ignore placeholder files (to keep directories in Git)
 !data/.gitkeep

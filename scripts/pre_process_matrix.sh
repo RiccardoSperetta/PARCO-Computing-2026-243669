@@ -9,6 +9,17 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
+if [ -n "$PBS_JOBID" ] || [ -n "$SLURM_JOB_ID" ]; then
+    echo "Cluster environment detected."    
+    gcc() { gcc-9.1.0 "$@"; }   # to make sure we're using the correct compiler version
+else 
+    echo "Local environment detected."
+    # correct compiler version responsibility is left to the user
+fi
+gcc --version
+echo ""
+
+
 MATRIX=$1
 RAW_FILE="data/raw/${MATRIX}.mtx"
 PROCESSED_DIR="data/processed/${MATRIX}"
@@ -31,12 +42,13 @@ fi
 
 mkdir -p "$PROCESSED_DIR"
 # compilation
-gcc --std=c11 -O3 src/matrix_processing.c -o src/matrix_processing.out
+gcc --std=c11 -O3 src/matrix_processing.c -o matrix_processing.out
 
-if ./src/matrix_processing.out "${MATRIX}"; then
+if ./matrix_processing.out "${MATRIX}"; then
     echo "  [OK]"
 else
     echo "  [ERROR] Processing failed"
     rm -f "${PROCESSED_DIR}"/*.bin
     exit 1
 fi
+

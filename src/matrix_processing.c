@@ -101,7 +101,16 @@ int main(int argc, char* argv[]) {
     //SORTING matrix by ROWS:
     qsort(matrix, nnz, sizeof(Triplet), compare_by_row);
 
-    RowPtr = (int*) malloc((ROWS+1)*sizeof(int));
+
+    #ifdef DEBUG
+    printf("\nCOO matrix:\n*REMEMBER* - at this stage rows are 1 based\n");
+    for (int i = 0; i<20; i++) {
+        printf("%d %d %lf\n", matrix[i].row, matrix[i].col, matrix[i].val - 1.0);
+    }
+    printf("...\n");    
+    #endif
+
+    RowPtr = (int*) calloc((ROWS+1), sizeof(int));
     Acol = (int*) malloc(nnz*sizeof(int));
     Aval = (double*) malloc(nnz*sizeof(double));
 

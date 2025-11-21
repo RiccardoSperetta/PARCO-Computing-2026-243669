@@ -98,9 +98,9 @@ int main(int argc, char* argv[]) {
     double* vector = malloc(COLS*sizeof(double));
     for (int i = 0; i<COLS; i++) {
         #ifdef DEBUG
-            vector[i] = 1.;         //easier to debug
+            vector[i] = rand()/1000000.0 + rand()%100; //more varied multiplications
         #else
-            vector[i] = rand()%100; //more varied multiplications
+            vector[i] = rand()/1000000.0 + rand()%100; //more varied multiplications
         #endif
     }
 
@@ -117,9 +117,9 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i<11; i++) {
         //multiplication: either with sequential or parallel code:
         GET_TIME(start);
-    #ifdef _OPENMP
-    #   pragma omp parallel for schedule(runtime) //schedule is determined at compile time
-    #endif 
+        #ifdef _OPENMP
+#       pragma omp parallel for schedule(runtime) //schedule is determined at compile time
+        #endif 
         for (int i=0; i<ROWS; i++) {
             double sum = 0.0;
             for(int j=RowPtr[i]; j<RowPtr[i+1]; j++){
@@ -146,6 +146,23 @@ int main(int argc, char* argv[]) {
     #endif
 
     //just for checking the first 10 elements
+    printf("\nRowPtr: ");
+    for(int i=0; i<10; i++) {
+        printf("%d ", RowPtr[i]);
+    }
+    printf("\nAcol: ");
+    for(int i=0; i<10; i++) {
+        printf("%d ", Acol[i]);
+    }
+    printf("\nAval: ");
+    for(int i=0; i<10; i++) {
+        printf("%lf ", Aval[i]);
+    }
+    printf("\nVECTOR: ");
+    for(int i=0; i<10; i++) {
+        printf("%lf ", vector[i]);
+    }
+    printf("\nRESULT: ");
     for(int i=0; i<10; i++) {
         printf("%lf ", result[i]);
     }

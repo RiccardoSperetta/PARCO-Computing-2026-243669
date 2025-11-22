@@ -12,7 +12,7 @@ if [ ! -d "data/processed" ]; then
 fi
 
 #pointless to run if there's no code to run
-if [ ! -f "src/SpMV.c" ]; then
+if [ ! -f "src/SpMV_iter.c" ]; then
     echo "[ERROR] missing C code to compile and run"
     exit 1
 fi

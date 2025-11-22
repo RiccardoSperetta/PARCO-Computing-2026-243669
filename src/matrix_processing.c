@@ -45,13 +45,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    //variables in order to read from file correctly
-    char *line = NULL;
-    size_t len = 0;
-    int nread;
-    bool matrix_data = true;
-    int iteration = 0;
-
     //arrays to be filled: full matrix and the 3 separate CSR arrays to compute
     Triplet* matrix;
     int* RowPtr;
@@ -61,12 +54,41 @@ int main(int argc, char* argv[]) {
 
 /*  ======= EXTRACT MATRIX ====================================
     =========================================================== */
+    //variables in order to read from file correctly
+    char *line = NULL;
+    size_t len = 0;
+    int nread;
+    bool matrix_data = true;
+    bool matrix_header = true;
+    int iteration = 0;
+    bool symmetric = false;
+
     while ((nread = getline(&line, &len, fp)) != -1) {
+        //parsing the matrix header:
+        if (matrix_header && nread > 0) {
+            //reads if matrix is real
+            if (strcasestr(line, "real") == NULL) {
+                fprintf(stderr, "Unsupported matrix type: only real matrices are supported.\n");
+                free(line);
+                fclose(fp);
+                return 1;
+            }
+            //reads if matrix is symmetric
+            symmetric = (strcasestr(line, "symmetric") != NULL);
+            
+            matrix_header = false;
+            continue;
+        }
+        
         // skip comment lines starting with '%'
         if (nread > 0 && line[0] == '%') continue;
+        
         // get the general data of the matrix
-        if (matrix_data) {
+        if (matrix_data && nread > 0) {
             if (sscanf(line, "%d %d %d", &ROWS, &COLS, &nnz) == 3) {
+                if (symmetric) {
+                    nnz = nnz*2; //ideally will hold double of the entries mentioned in the first line
+                }
                 matrix = (Triplet*) malloc(nnz*sizeof(Triplet));
             } else {
                 fprintf(stderr, "bad formatting of mtx file...\n");
@@ -81,13 +103,26 @@ int main(int argc, char* argv[]) {
             Triplet t;
             sscanf(line, "%d %d %lf", &t.row, &t.col, &t.val);
             if (t.val == 0) {
-                nnz--; //some matrices also include "0" entries -> we ignore them 
+                if (symmetric) { //there wont be no specular values stored in the matrix
+                    nnz--;
+                }
+                nnz--; //some matrices also include "0" entries -> ignored 
             } else {
                 //because indexes are 1 based:
                 t.col--;
-                //not doing t.row--: makes the CSR computation easier
+                //not doing t.row--: makes the CSR computation easier later
                 matrix[iteration] = t;
                 iteration++;
+                if (symmetric) {
+                    if (t.row == (t.col+1)) { //value is on the matrix diagonal
+                        nnz--;                // = no specular will be stored          
+                    } else {
+                        Triplet specular = {t.col+1, t.row-1, t.val};
+                        matrix[iteration] = specular;
+                        iteration++;
+                    }
+                }
+                
             }
         }
     }

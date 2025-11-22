@@ -145,25 +145,27 @@ int main(int argc, char* argv[]) {
         printf("sequential code running...\n");
     #endif
 
+    printf("rows= %d columns= %d nnz= %d\n", ROWS, COLS, nnz);
     //just for checking the first 10 elements
-    printf("\nRowPtr: ");
-    for(int i=0; i<10; i++) {
+    int debug_print_size = 10;
+    printf("RowPtr: ");
+    for(int i=0; i<debug_print_size; i++) {
         printf("%d ", RowPtr[i]);
     }
     printf("\nAcol: ");
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<debug_print_size; i++) {
         printf("%d ", Acol[i]);
     }
     printf("\nAval: ");
-    for(int i=0; i<10; i++) {
-        printf("%.15e ", Aval[i]);
+    for(int i=0; i<debug_print_size; i++) {
+        printf("%.2f ", Aval[i]);  //use %.15e for a more precise print
     }
     printf("\nVECTOR: ");
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<debug_print_size; i++) {
         printf("%lf ", vector[i]);
     }
     printf("\nRESULT: ");
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<debug_print_size; i++) {
         printf("%lf ", result[i]);
     }
     printf("\n");

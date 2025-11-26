@@ -13,7 +13,7 @@ CHUNKSIZES = [10, 100, 1000]
 
 
 # ----------------------------------------------------------------------
-# Helper:   read time.txt (x values in milliseconds, scientific notation)
+# reads time.txt (x values in milliseconds, scientific notation)
 # ----------------------------------------------------------------------
 def read_times_ms(time_file: Path) -> List[float]:
     """Read time.txt and return list of floats in milliseconds."""
@@ -26,10 +26,9 @@ def read_times_ms(time_file: Path) -> List[float]:
     return times_ms.tolist()
 
 # ----------------------------------------------------------------------
-# Helper:   read perf.txt (x lines of "L1_miss% LLC_miss%")
+# reads perf.txt (x lines of "L1_miss% LLC_miss%")
 # ----------------------------------------------------------------------
-def read_perf(perf_file: Path) -> List[Dict]:
-    """Return list of dicts with L1 and LLC miss percentages."""
+def read_perf(perf_file: Path) -> List[Dict]: 
     records = []
     if not perf_file.exists():
         return records
@@ -152,8 +151,7 @@ def load_all_data(results_dir: Path):
                         "chunksize": chunksize,
                         **rec   # includes run, L1 and LLC cache misses %
                     })
-    # ----------------------------------------------------------------------
+
     # Build final DataFrames from raw data
-    # ----------------------------------------------------------------------
-    return pd.DataFrame(time_records), pd.DataFrame(perf_records)
+    return pd.DataFrame(time_records), pd.DataFrame(perf_records) # returned as a tuple
         

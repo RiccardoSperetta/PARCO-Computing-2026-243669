@@ -3,8 +3,8 @@ import pandas as pd
 
 
 # ----------------------------------------------------------------------
-# Helper:   Creates a summary with mean + 90th percentile for the given value columns.
-#           Works for both time and perf DataFrames.
+# Creates a summary with mean + 90th percentile for the given value columns.
+# Works for both time and perf DataFrames.
 # ----------------------------------------------------------------------
 def add_summary_stats(df: pd.DataFrame, value_cols: list):
     group_cols = ["matrix", "opt_level", "threads", "schedule", "chunksize"]
@@ -22,7 +22,3 @@ def add_summary_stats(df: pd.DataFrame, value_cols: list):
     summary = summary.reset_index()
     
     return summary
-
-# ----------------------------------------------------------------------
-# Helper:   Adds GFLOPs and memory bandwidth...(?)
-# ----------------------------------------------------------------------

@@ -43,7 +43,7 @@ fi
 mkdir -p "$PROCESSED_DIR"
 # compilation
 gcc --std=c11 -O3 src/matrix_processing.c -o matrix_processing.out
-
+# execution
 if ./matrix_processing.out "${MATRIX}"; then
     echo "  [OK]"
 else
@@ -52,3 +52,5 @@ else
     exit 1
 fi
 
+# Cleanup executable
+rm matrix_processing.out

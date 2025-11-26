@@ -1,0 +1,272 @@
+==================================================
+Matrix Processing Pipeline
+==================================================
+Job ID: 4718553.hpc-head-n1.unitn.it
+Running on: hpc-c11-node18.unitn.it
+Started at: Sat Nov 22 22:46:18 CET 2025
+Working directory: /home/riccardo.speretta/final/PARCO-Computing-2026-243669
+Allocated CPUs: 64
+Node architecture: Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                96
+On-line CPU(s) list:   0-95
+Thread(s) per core:    1
+Core(s) per socket:    24
+Socket(s):             4
+NUMA node(s):          4
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Gold 6252N CPU @ 2.30GHz
+Stepping:              7
+CPU MHz:               2300.000
+BogoMIPS:              4600.00
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              36608K
+NUMA node0 CPU(s):     0-23
+NUMA node1 CPU(s):     24-47
+NUMA node2 CPU(s):     48-71
+NUMA node3 CPU(s):     72-95
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 invpcid_single intel_ppin intel_pt ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts pku ospke avx512_vnni md_clear spec_ctrl intel_stibp flush_l1d arch_capabilities
+==================================================
+
+=== Step 1: Downloading matrices ===
+[ Downloading matrices ]
+[DOWNLOAD] circuit5M (group: Freescale)
+  [OK]
+[ DONE ]
+
+=== Step 2: Preprocessing matrices ===
+[ Processing matrices ]
+Cluster environment detected.
+gcc-9.1.0 (GCC) 9.1.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+[PROCESS] circuit5M
+  [OK]
+[ DONE ]
+
+=== Step 3: Benchmarking matrices ===
+[ Measuring matrices ]
+Cluster environment detected.
+gcc-9.1.0 (GCC) 9.1.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+perf version 3.10.0-1160.el7.x86_64.debug
+
+[BENCHMARK] circuit5M
+  - running circuit5M - sequential with -O0 -
+  - done circuit5M - sequential with -O0 -
+  - running circuit5M - sequential with -O1 -
+  - done circuit5M - sequential with -O1 -
+  - running circuit5M - sequential with -O2 -
+  - done circuit5M - sequential with -O2 -
+  - running circuit5M - sequential with -O3 -
+  - done circuit5M - sequential with -O3 -
+  - running circuit5M - sequential with -Ofast -
+  - done circuit5M - sequential with -Ofast -
+  - running circuit5M - parallel with 2 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 2 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 2 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 2 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 2 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 2 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 2 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 2 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 2 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 2 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 2 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 2 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 2 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 4 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 4 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 4 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 4 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 4 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 4 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 4 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 4 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 4 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 4 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 4 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 4 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 4 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 8 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 8 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 8 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 8 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 8 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 8 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 8 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 8 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 8 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 8 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 8 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 8 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 8 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 16 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 16 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 16 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 16 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 16 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 16 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 16 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 16 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 16 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 16 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 16 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 16 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 16 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 32 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 32 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 32 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 32 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 32 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 32 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 32 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 32 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 32 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 32 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 32 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 32 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 32 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 64 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 64 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 64 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 64 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 64 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 64 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 64 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 64 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 64 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 64 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 64 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 64 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 64 threads - guided schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 128 threads - static schedule - chunksize = 10 -
+  - done circuit5M - parallel with 128 threads - static schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 128 threads - static schedule - chunksize = 100 -
+  - done circuit5M - parallel with 128 threads - static schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 128 threads - static schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 128 threads - static schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 10 -
+  - done circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 100 -
+  - done circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 128 threads - dynamic schedule - chunksize = 1000 -
+
+  - running circuit5M - parallel with 128 threads - guided schedule - chunksize = 10 -
+  - done circuit5M - parallel with 128 threads - guided schedule - chunksize = 10 -
+
+  - running circuit5M - parallel with 128 threads - guided schedule - chunksize = 100 -
+  - done circuit5M - parallel with 128 threads - guided schedule - chunksize = 100 -
+
+  - running circuit5M - parallel with 128 threads - guided schedule - chunksize = 1000 -
+  - done circuit5M - parallel with 128 threads - guided schedule - chunksize = 1000 -
+
+  [OK]
+[ Measuring complete ]
+
+==================================================
+Pipeline completed successfully
+Finished at: Sat Nov 22 23:32:10 CET 2025
+==================================================

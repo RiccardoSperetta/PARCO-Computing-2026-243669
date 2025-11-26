@@ -60,7 +60,7 @@ for opt in "${OPT_LEVELS[@]}"; do
     for i in {1..10}; do
         perf stat -e L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses ./spmv.out "$MATRIX" 2>&1 \
             | egrep 'L1-dcache-load-misses|LLC-load-misses' \
-            | grep -oP '\d+\.\d+(?=%)' \
+            | grep -oP '\d+\.\d+(?=%)' \                        # explicitly extract percentages out of the perf print
             | paste -sd' ' - >> "${RESULTS_DIR}/perf.txt"
     done
 
@@ -113,7 +113,7 @@ while [ $threads -le $((2 * NUM_CORES)) ]; do
             for i in {1..10}; do
                 perf stat -e L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses ./spmv.out "$MATRIX" 2>&1 \
                     | egrep 'L1-dcache-load-misses|LLC-load-misses' \
-                    | grep -oP '\d+\.\d+(?=%)' \
+                    | grep -oP '\d+\.\d+(?=%)' \                        # explicitly extract percentages out of the perf print
                     | paste -sd' ' - >> "${RESULTS_DIR}/perf.txt"
             done
 

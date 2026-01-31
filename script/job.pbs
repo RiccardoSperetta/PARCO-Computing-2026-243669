@@ -1,0 +1,45 @@
+#!/bin/bash
+# Job name
+#PBS -N name
+# Output files
+#PBS -o ./name.o
+#PBS -e ./name.e
+# Queue name
+#PBS -q shortCPUQ
+# Set the maximum wall time
+#PBS -l walltime=0:02:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=2:ncpus=2:mpiprocs=2:mem=100mb
+
+# Modules for python and MPI
+module load GCC/11.2.0
+module load OpenMPI/4.1.1-GCC-11.2.0
+
+gcc --version
+mpicc --version
+
+
+# Print the name of the file that contains the list of the nodes assigned to the job and list all the nodes
+NODES=$(cat $PBS_NODEFILE)
+echo The running nodes are $NODES
+
+# Get the list of unique nodes assigned to the job
+NODES=$(sort -u $PBS_NODEFILE)
+echo The running nodes are $NODES
+
+# Loop through each node and get architecture information
+for NODE in $NODES; do
+    echo "Node: $NODE"
+    ssh $NODE "lscpu"
+done
+
+# Select the working directory 
+cd $PBS_O_WORKDIR
+
+# the code should be previously compiled
+mpicc source/BFS_1D.c source/graph_utils.c -o bfs.out -fopenmp
+
+# Run the code
+mpirun --hostfile $PBS_NODEFILE ./bfs.out data/csr/tricky_graph.bin
+# OpenMPI does not see the PBS allocation; 
+# passing --hostfile $PBS_NODEFILE makes the 8(in this case) slots visible and fixes the problem

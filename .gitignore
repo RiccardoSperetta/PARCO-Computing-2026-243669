@@ -1,0 +1,5 @@
+# temporary/editor files
+.clangd
+*.tmp
+.vscode/
+venv/

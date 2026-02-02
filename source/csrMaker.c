@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
+#include <unistd.h>
 #include "graph_utils.h"
 
-// TODO: better commenting
-CSR* edgelist_to_csr(const char *filename, int directed) {
+CSR* edgelist_to_csr(const char *filename, int directed, int shuffle) {      // REMEMBER: for later pull technique we MUST work with undirected graphs!
     printf("Converting edge list to CSR format...\n");
     double start_time = omp_get_wtime();
     
@@ -20,7 +20,6 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
      * ======================================================================== 
      * since SNAP graphs may not be contiguous we need to first read the graph 
      * and find out what's the max ID -> then we'll be able to map those IDs from 0 to n-1
-     * = we avoid dealing with extrimely sparse graphs simply because of the labels used for their vertices
      */
     printf("STEP 1: Scanning file...\n");
     node_t max_vertex = 0;
@@ -46,7 +45,7 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
     
     printf("Found %ld edges with vertices with a maximum ID of %d\n", n_edges, max_vertex);
     
-    // We're sure on the number of edges of the graph:
+    // NOW we can be sure on the number of edges of the graph:
     Edge *edges = malloc(n_edges * sizeof(Edge));
     if (!edges) {
         fprintf(stderr, "Error: Cannot allocate memory for edges\n");
@@ -55,35 +54,17 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
     }
     
     /* ========================================================================
-     * STEP 2: Read all edges into memory + mapping of indices to [0...n-1]
+     * STEP 2: Read all edges into memory 
      * ======================================================================== 
-     * We rewind the file and read again, this time storing edges.
      */
     printf("STEP 2: storing edge list...\n");
     rewind(fp);
     edge_t idx = 0;
 
-
-    /* allocate map */
-    node_t *map = malloc((max_vertex + 1) * sizeof(node_t));
-    for (node_t i = 0; i <= max_vertex; i++) {
-        map[i] = -1;
-    }
-    
-    /* remap edges as soon as you copy them in the edges array */
-    node_t next_id = 0;
-
-    //TODO: first shuffle, THEN relabel in order to allow for basic load balancing!
     while (fgets(line, sizeof(line), fp)) {
         if (line[0] == '#') continue;
         
         if (sscanf(line, "%d %d", &u, &v) == 2) {
-            //update mapping if new vertex is found
-            if (map[u] == -1) map[u] = next_id++;
-            u = map[u];
-            if (map[v] == -1) map[v] = next_id++;
-            v = map[v];
-
             // Store the edge
             edges[idx].src = u;
             edges[idx].dst = v;
@@ -98,14 +79,61 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
         }
     }
     fclose(fp);
+
+    /* ========================================================================
+     * STEP 3: SHUFFLING of edges for basic load balancing 
+     * ======================================================================== 
+     */
+    
+    printf("STEP 3: Shuffling edges...");
+    if(shuffle) {
+        srand(omp_get_wtime() + getpid());
+        printf("\n");
+        for (edge_t i = n_edges - 1; i > 0; i--) {
+            edge_t j = rand() % (i + 1); // Pick a random index from 0 to i
+            // Swap edges[i] and edges[j]
+            Edge temp = edges[i];
+            edges[i] = edges[j];
+            edges[j] = temp;
+        }
+    } else {
+        printf("skip\n");
+    }
+    
+
+
+    /* ========================================================================
+     * STEP 4: MAPPING of indices to [0...n-1]
+     * ======================================================================== 
+     * After shuffling, we impose a new remapping of those vertices so that we can 
+     * first sort and then build a CSR accordingly to this new renaming of vertices
+     */
+    printf("STEP 4: Mapping vertices IDs...\n");
+     /* allocate map */
+    node_t *map = malloc((max_vertex + 1) * sizeof(node_t));
+    for (node_t i = 0; i <= max_vertex; i++) {
+        map[i] = -1;
+    }
+    node_t next_id = 0;
+
+    for (edge_t i=0; i<n_edges; i++) {
+        node_t u = edges[i].src;
+        node_t v = edges[i].dst;
+        //update mapping if new vertex is found
+        if (map[u] == -1) map[u] = next_id++;
+        edges[i].src = map[u];
+        if (map[v] == -1) map[v] = next_id++;
+        edges[i].dst = map[v];
+    }
+
     
     /* ========================================================================
-     * STEP 3: SORT EDGES by source vertex (and destination as tiebreaker)
+     * STEP 5: SORT EDGES by source vertex (and destination as tiebreaker)
      * ======================================================================== 
      * CSR format requires edges from the same source to be 
-     * contiguous in memory. After sorting:
+     * contiguous in memory, that's why we need orting:
      */
-    printf("STEP 3: Sorting %ld edges...\n", n_edges);
+    printf("STEP 5: Sorting %ld edges...\n", n_edges);
 #ifdef _OPENMP
     double sort_start = omp_get_wtime();
     sort_edges(edges, n_edges);
@@ -121,7 +149,7 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
 #endif
 
     /* ========================================================================
-     * STEP 4: BUILD CSR STRUCTURE
+     * STEP 6: BUILD CSR STRUCTURE
      * ======================================================================== 
      * CSR has two arrays:
      * 
@@ -135,9 +163,7 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
      *    - Stores all destination vertices in sorted order
      */
     
-    //TODO: also save this edge list in data/edge_list/filename.txt (?)
-    // needed for graph500
-    printf("Building CSR arrays...\n");
+    printf("STEP 6: Building CSR arrays...\n");
     CSR *csr = malloc(sizeof(CSR));
     if (!csr) {
         free(edges);
@@ -160,32 +186,14 @@ CSR* edgelist_to_csr(const char *filename, int directed) {
         return NULL;
     }
     
-    // TODO: it's easy to do this in one step
-    /* ========================================================================
-     * STEP 1: Fill col_idx and count edges per vertex
-     * ======================================================================== 
-     * Since edges are sorted by source, we can:
-     * - Copy all destinations to col_idx
-     * - Count how many edges each vertex has
-     * 
-     * We use row_ptr[src+1] temporarily to count, will fix in next step.
-     */
+    // most straight forward approach: first I compute the col_idx array
     for (edge_t i = 0; i < n_edges; i++) {
         csr->col_idx[i] = edges[i].dst;
         // Count edges for this source vertex (store in next position)
         csr->row_ptr[edges[i].src + 1]++;
     }
-    
-    /* ========================================================================
-     * STEP 2: Convert counts to offsets via prefix sum
-     * ======================================================================== 
-     * Transform row_ptr from "counts" to "cumulative offsets"
-     * 
-     * Before: row_ptr = [0, 2, 1, 2] (counts for vertices 0,1,2)
-     * After:  row_ptr = [0, 2, 3, 5] (starting positions)
-     * 
-     * This is a prefix sum (cumulative sum) operation.
-     */
+
+    //then I compute the prefix sum on row_ptr
     for (node_t i = 1; i <= n_vertices; i++) {
         csr->row_ptr[i] += csr->row_ptr[i - 1];
     }
@@ -206,10 +214,13 @@ MAIN
 ======================================================================================== */
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        printf("Usage: %s <edge_list_file>\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage: %s <edge_list_file> <directed> <shuffle>\n", argv[0]);
         return 1;
     }
+
+    int directed = atoi(argv[2]);
+    int shuffle = atoi(argv[3]);
     
     // Set number of OpenMP threads (or use OMP_NUM_THREADS env variable)
     // omp_set_num_threads(16);
@@ -217,7 +228,7 @@ int main(int argc, char **argv) {
     printf("Using %d OpenMP threads\n", omp_get_max_threads());
     
     // Convert edge list to CSR (1 = directed, 0 = undirected)
-    CSR *graph = edgelist_to_csr(argv[1], 1);
+    CSR *graph = edgelist_to_csr(argv[1], directed, shuffle);
     
     if (graph) {
         #ifdef DEBUG
@@ -252,14 +263,3 @@ int main(int argc, char **argv) {
     
     return 0;
 }
-
-/* 
-what's going on:
-    run program with data/raw/file_name.txt 
-    first read of file in order to understand what's the max-vertex ID and number of edges
-    load edges in memory and meanwhile re-label vertices
-    sort (even parallely if needed) 
-    build CSR
-    print (if wanted) 
-    eventually store on data/csr/file_name.bin
-*/

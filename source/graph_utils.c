@@ -27,23 +27,25 @@ void print_csr_stats(CSR *csr) {
     printf("Average degree: %.2f\n", (double)csr->n_edges / csr->n_vertices);
     
     // Find min/max degree
-    long min_degree = csr->n_edges;
-    long max_degree = 0;
+    node_t min_degree = csr->n_edges;
+    node_t max_degree = 0;
     for (int i = 0; i < csr->n_vertices; i++) {
         long degree = csr->row_ptr[i + 1] - csr->row_ptr[i];
         if (degree < min_degree) min_degree = degree;
         if (degree > max_degree) max_degree = degree;
     }
-    printf("Min degree: %ld\n", min_degree);
-    printf("Max degree: %ld\n", max_degree);
+    printf("Min degree: %d\n", min_degree);
+    printf("Max degree: %d\n", max_degree);
 
     printf("row_ptr: [");
-    for (int i=0; i<=csr->n_vertices; i++) {
+    node_t cap = 15 < csr->n_vertices ? 15: csr->n_vertices;
+    for (int i=0; i<=cap; i++) {
         printf("%ld ", csr->row_ptr[i]);
     }
     printf("]\n");
     printf("col_idx: [");
-    for (int i=0; i<csr->n_edges; i++) {
+    node_t cap2 = 30 < csr->n_edges ? 30: csr->n_edges;
+    for (int i=0; i<cap2; i++) {
         printf("%d ", csr->col_idx[i]);
     }
     printf("]\n");

@@ -5,19 +5,28 @@
 #include <string.h>
 #include <limits.h>
 #include "graph_utils.h"
+#include "bitset.h"
 
 #define INF UINT_MAX
 
 int block_size, rank, p;
+double start_time, end_time;
+double comm_time_start, comm_time_end;
 
-int* distributed_bfs(
+/* ============================================================================================================================
+============================================================== BFS ============================================================
+============================================================================================================================ */
+void distributed_bfs(
     CSR g,                      // CSR graph
     node_t local_start,         // first global vertex owned
     node_t n,                   // number of total vertices
     node_t source,              // where the bfs has to start
     MPI_Comm comm
 ) {
+    // Needed for normalizing row_ptr start-finish intervals
     node_t local_edges = g.row_ptr[0];
+    // Visited nodes tracked with a bitset: includes all nodes in the graph but is updated locally
+    bitset_t visited = bitset_create(n);
 
     // Local distance vector - stores shortest path distance for each vertex from source
     int *d = malloc(g.n_vertices * sizeof(int));
@@ -25,51 +34,84 @@ int* distributed_bfs(
         d[i] = INF;
 
     // Local parent array - stores parent of each vertex in BFS tree
-    int *parent = malloc(g.n_vertices * sizeof(long));
+    int *parent = malloc(g.n_vertices * sizeof(int));
     for (int i = 0; i < g.n_vertices; i++)
         parent[i] = -1;
 
-    // Local frontier, managed as a FIFO queue
-    node_t *frontier = malloc(g.n_vertices * sizeof(node_t)); //at most can hold n_vertices at the same time
+    // Local frontier
+    bitset_t frontier = bitset_create(n);
     node_t frontier_size = 0;
 
+
+    start_time = MPI_Wtime();
     // Initialize: rank owning the source sets distance to 0 and adds to frontier
     if (source >= local_start && source < local_start + g.n_vertices) {
         node_t u = source - local_start;
+        bitset_set(&visited, source);
         d[u] = 0;
         parent[u] = source;              // Source is its own parent
-        frontier[0] = source;
+        bitset_set(&frontier, source);
         frontier_size = 1;
     }
 
     int level = 1;
 
+    // Send buffers: each process prepares data for all other processes
+    int *send_counts = calloc(p, sizeof(int));
+    Edge **send_buf = malloc(p * sizeof(Edge*));
+
+
+    /* ==============================================================
+    main BFS loop
+    ============================================================== */
     while (1) {
-        // Send buffers: each process prepares data for all other processes
-        int *send_counts = calloc(p, sizeof(int));
-        Edge **send_buf = malloc(p * sizeof(Edge*));
+        // Explore local frontier: for each frontier vertex, calculate send_counts for each rank
+        for (node_t i = 0; i < local_start+g.n_vertices; i++) {
+            if(bitset_test(&frontier, i)) {
+                node_t u = i - local_start;                     // node in frontier - normalized
+                for (node_t e = g.row_ptr[u] - local_edges; e < g.row_ptr[u + 1] - local_edges; e++) { //for all neighbors of u (normalized)
+                    node_t v = g.col_idx[e];                    // neighbor of node in frontier (global)
+                    if (bitset_test(&visited, v) == 1) {continue;}
+                    int owner = v / block_size;                 // process owning the destination vertex of the edge
+                    send_counts[owner]++;
+                }
+            }
+        }
+        
+        // Allocate send_buf based on calculated send_counts -> avoiding over allocation of n_edges for all ranks...
+        // still an over-estimation: we're counting more than one times the same vertex, but we're going to send only 
+        // one edge for that outgoing vertex
+        for (int i = 0; i < p; i++) {
+            send_buf[i] = malloc(send_counts[i] * sizeof(Edge));
+            send_counts[i] = 0; // Reset send_counts for reuse in the next loop 
+        }
 
-        for (int i = 0; i < p; i++)
-            send_buf[i] = malloc(g.n_vertices * sizeof(Edge));
+        // Populate send_buf with edges to be sent
+        for (node_t i = local_start; i < local_start+g.n_vertices; i++) {
+            if(bitset_test(&frontier, i)) {
+                node_t u = i - local_start;                // node in frontier - normalized
+                for (node_t e = g.row_ptr[u] - local_edges; e < g.row_ptr[u + 1] - local_edges; e++) {
+                    node_t v = g.col_idx[e];            // neighbor of node in frontier (global)
+                    if (bitset_test(&visited, v) == 1) {continue;}
+                    bitset_set(&visited, v);
 
-        // Explore local frontier: for each frontier vertex, examine all outgoing edges
-        for (node_t i = 0; i < frontier_size; i++) {
-            node_t u = frontier[i]-local_start;                 //node in frontier - normalized
-            for (node_t e = g.row_ptr[u]-local_edges; e < g.row_ptr[u + 1]-local_edges; e++) {
-                node_t v = g.col_idx[e];            //neighbor of node in frontier
-                int owner = v / block_size;         //process owning the destination vertex of the edge
-                send_buf[owner][send_counts[owner]].src = frontier[i];
-                send_buf[owner][send_counts[owner]++].dst = v;
-                //printf("At rank %d, discovering %d -> %d, sending at %d\n",rank, u+local_start, v, owner );
+                    int owner = v / block_size;         // process owning the destination vertex of the edge
+                    
+                    send_buf[owner][send_counts[owner]].src = i;
+                    send_buf[owner][send_counts[owner]++].dst = v;
+                }
             }
         }
 
-        // Exchange frontier sizes across all processes
+        /* ==============================================================
+        Exchange of NUMBER of outgoing edges before Alltoallv -> all ranks know how much edges it needs to expect
+        ============================================================== */
         int *recv_counts = malloc(p * sizeof(int));
         MPI_Alltoall(send_counts, 1, MPI_INT,
                      recv_counts, 1, MPI_INT,
                      comm);
         // => each rank knows how many "external visits" it's going to receive
+
 
         // Calculate displacements for send/receive buffers
         // needed for a correct distribution (and receivement) in the Alltoallv between all the p processes
@@ -94,13 +136,16 @@ int* distributed_bfs(
                 send_flat[sdispls[i] + j] = send_buf[i][j];
 
         
-        // Exchange frontier vertices between processes
+        /* ==============================================================
+        Exchange of ACTUAL outgoing edges before Alltoallv -> all ranks can now update their frontier
+        ============================================================== */
         MPI_Alltoallv(send_flat, send_counts, sdispls, MPI_EDGE,
                       recv_buf, recv_counts, rdispls, MPI_EDGE,
                       comm);
     
         // Build next frontier: add unvisited vertices and set parent pointers
         frontier_size = 0;
+        bitset_clear(&frontier);
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
             if (e.dst < local_start || e.dst > local_start + g.n_vertices) {
@@ -110,23 +155,29 @@ int* distributed_bfs(
             node_t local_v = e.dst - local_start;
             if (d[local_v] == INF) {
                 d[local_v] = level;
-                parent[local_v] = e.src;  // Set parent to the vertex that discovered this one
-                frontier[frontier_size++] = e.dst;
+                parent[local_v] = e.src;            // Set parent to the vertex that discovered this one
+                bitset_set(&frontier, e.dst);    // Insert into next frontier
+                frontier_size++;
+                //printf("LEVEL %d - %d->%d arrived in %d, now having frontier size of %d\n", level, e.src, e.dst,rank, frontier_size);
             }
         }
+        //printf("LEVEL %d - Rank %d with frontier of size %d\n", level, rank, frontier_size);
 
-        
-
-        // Check global termination: stop if no new vertices were discovered
-        int global_frontier;
+        /* ==============================================================
+        Check global termination: stop if no new vertices were discovered
+        ============================================================== */ 
+        node_t global_frontier;
         MPI_Allreduce(&frontier_size, &global_frontier, 1,
-                      MPI_INT, MPI_SUM, comm);
+                      MPI_UINT32_T, MPI_SUM, comm);
+
+        if (global_frontier == 0) {
+            end_time = MPI_Wtime();
+            printf("rank%d spent %.3f seconds\n", rank, end_time-start_time);
+        }
 
         // Cleanup temporary buffers
         for (int i = 0; i < p; i++)
             free(send_buf[i]);
-        free(send_buf);
-        free(send_counts);
         free(recv_counts);
         free(sdispls);
         free(rdispls);
@@ -134,23 +185,19 @@ int* distributed_bfs(
         free(recv_buf);
 
         if (global_frontier == 0) { // = all processes don't have any more vertices to explore
-            if(rank == 0) printf("BFS finished at level %d\n", level);
+            if(rank == 0) printf("BFS finished at level %d\n", level);            
             break;
         }
 
         level++;
 
-        MPI_Barrier(comm);
     }
 
-    
-    printf("rank %d, having %d nodes: ", rank, g.n_vertices);
-    for (int i=0; i<g.n_vertices; i++) {
-        printf("%d - %d ", (i+local_start) ,parent[i]);
-    }
-    printf("\n");
-    fflush(stdout);
 
+    /* 
+    gathering of global parent array
+    TODO: write this on a separate file with MPI-IO
+    */
     int *recvcounts = NULL;
     int *displs = NULL;
     int *parent_global = NULL;
@@ -175,19 +222,25 @@ int* distributed_bfs(
     MPI_Gatherv(parent, g.n_vertices, MPI_INT, parent_global, recvcounts, displs, MPI_INT, 0, comm);
     if (rank == 0) {
         printf("TOTAL PARENT ARRAY = ");
-        for (int i=0; i<n; i++) {
+        int cap = 30 < n ? 30 : n;
+        for (int i=0; i<cap; i++) {
             printf("%d ", parent_global[i]);
         } printf("\n");
     }
 
-    free(frontier);
+    free(send_buf);
+    free(send_counts);
+    bitset_free(&visited);
+    bitset_free(&frontier);
     free(d);
     free(parent);
 
-    return parent_global;
+    return;
 }
 
-
+/* ============================================================================================================================
+============================================================== MAIN ===========================================================
+============================================================================================================================ */
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
     init_mpi_datatypes();
@@ -206,7 +259,9 @@ int main(int argc, char **argv) {
     edge_t start, end;
     node_t total_vertices;
 
-    // STEP 1: each rank reads its portion of CSR:
+    /* ============================================================== 
+    STEP 1: each rank reads its portion of CSR through MPI IO
+    ============================================================== */
     MPI_File handle;
     MPI_File_open(MPI_COMM_WORLD, argv[1], MPI_MODE_RDONLY, MPI_INFO_NULL, &handle);
 
@@ -246,14 +301,15 @@ int main(int argc, char **argv) {
     print_csr_stats(&graph);
     #endif
 
-    // STEP 2: actual BFS
-    int* parent_global = distributed_bfs(graph, rank*block_size, total_vertices, source, MPI_COMM_WORLD);
-
-    if (parent_global) {
-        printf("rank checking = %d\n", rank);
+    printf("RANK %d - %d vertices and %ld edges, going from %ld to %ld\n", rank, graph.n_vertices, graph.n_edges, start, start + graph.n_edges);
+    //print_csr_stats(&graph);
 
 
-    }
+    /* ============================================================== 
+    STEP 2: BFS algorithm
+    ============================================================== */
+    distributed_bfs(graph, rank*block_size, total_vertices, source, MPI_COMM_WORLD);
+
 
     //TODO: graph500 checks on parent array
 

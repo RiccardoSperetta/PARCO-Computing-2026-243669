@@ -12,25 +12,74 @@ void init_mpi_datatypes(void) {
     MPI_Type_commit(&MPI_EDGE);
 }
 
-void free_csr(CSR *csr) {
-    if (csr) {
-        free(csr->row_ptr);
-        free(csr->col_idx);
+int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, int* distance, int* parent) {
+    int local_errors = 0;
+    edge_t local_edges = g->row_ptr[0];
+
+    // TODO: maybe consider only some vertices
+    for (node_t v = 0; v < g->n_vertices; v++) {
+        node_t global_v = v + local_start;           
+        node_t p = parent[v];
+
+        if (p == -1) continue;                    // unreachable
+
+        if (global_v == source) {                      // source must be parent of itself and be at distance = 0
+            if (p != source || distance[global_v] != 0) local_errors++;
+        } else {
+            if (p < 0 || p >= global_nverts || p == global_v) { // out of range condition + multiple sources
+                local_errors++;
+                continue;
+            }
+
+            // does edge exist? - works ONLY for UNDIRECTED graphs!
+            int edge_exists = 0;
+            for (edge_t j = g->row_ptr[v]-local_edges; j < g->row_ptr[v+1]-local_edges; j++) {
+                if (g->col_idx[j] == p) {
+                    edge_exists = 1;
+                    break;
+                }
+            }
+            if (edge_exists != 1) {
+                local_errors++;
+                continue;
+            }
+
+            // BFS tree distance invariant
+            if (p >= local_start && p < local_start + g->n_vertices) { //for local vertices immediate check
+                if (distance[v] != distance[p-local_start]+1) {
+                    local_errors++;
+                }
+            } 
+            //parent may be remote → defer to query
+            // or skip for now if you don't want cross-rank yet
+            else {
+
+            }
+        }
+    }
+
+    return local_errors;
+}
+
+void free_csr(CSR *g) {
+    if (g) {
+        free(g->row_ptr);
+        free(g->col_idx);
     }
 }
 
 // Print basic statistics about the CSR
-void print_csr_stats(CSR *csr) {
+void print_csr_stats(CSR *g) {
     printf("\n=== CSR Statistics ===\n");
-    printf("Vertices: %d\n", csr->n_vertices);
-    printf("Edges: %ld\n", csr->n_edges);
-    printf("Average degree: %.2f\n", (double)csr->n_edges / csr->n_vertices);
+    printf("Vertices: %d\n", g->n_vertices);
+    printf("Edges: %ld\n", g->n_edges);
+    printf("Average degree: %.2f\n", (double)g->n_edges / g->n_vertices);
     
     // Find min/max degree
-    node_t min_degree = csr->n_edges;
+    node_t min_degree = g->n_edges;
     node_t max_degree = 0;
-    for (int i = 0; i < csr->n_vertices; i++) {
-        long degree = csr->row_ptr[i + 1] - csr->row_ptr[i];
+    for (int i = 0; i < g->n_vertices; i++) {
+        long degree = g->row_ptr[i + 1] - g->row_ptr[i];
         if (degree < min_degree) min_degree = degree;
         if (degree > max_degree) max_degree = degree;
     }
@@ -38,15 +87,15 @@ void print_csr_stats(CSR *csr) {
     printf("Max degree: %d\n", max_degree);
 
     printf("row_ptr: [");
-    node_t cap = 15 < csr->n_vertices ? 15: csr->n_vertices;
+    node_t cap = 15 < g->n_vertices ? 15: g->n_vertices;
     for (int i=0; i<=cap; i++) {
-        printf("%ld ", csr->row_ptr[i]);
+        printf("%ld ", g->row_ptr[i]);
     }
     printf("]\n");
     printf("col_idx: [");
-    node_t cap2 = 30 < csr->n_edges ? 30: csr->n_edges;
+    node_t cap2 = 30 < g->n_edges ? 30: g->n_edges;
     for (int i=0; i<cap2; i++) {
-        printf("%d ", csr->col_idx[i]);
+        printf("%d ", g->col_idx[i]);
     }
     printf("]\n");
 }

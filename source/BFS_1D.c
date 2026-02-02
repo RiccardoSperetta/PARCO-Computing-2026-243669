@@ -38,7 +38,8 @@ void distributed_bfs(
     for (int i = 0; i < g.n_vertices; i++)
         parent[i] = -1;
 
-    // Local frontier
+    // Local frontier 
+    // TODO: make this of local size and not global
     bitset_t frontier = bitset_create(n);
     node_t frontier_size = 0;
 
@@ -196,7 +197,7 @@ void distributed_bfs(
 
     /* 
     gathering of global parent array
-    TODO: write this on a separate file with MPI-IO
+    TODO: remove all of this stuff
     */
     int *recvcounts = NULL;
     int *displs = NULL;
@@ -226,6 +227,13 @@ void distributed_bfs(
         for (int i=0; i<cap; i++) {
             printf("%d ", parent_global[i]);
         } printf("\n");
+    }
+
+    int val = validate(&g, source, local_start, n, d, parent);
+    if (val == 0) {
+        printf("All fine on rank %d\n", rank);
+    } else {
+        printf("Something's wrong in rank %d: %d errors found\n", rank, val);
     }
 
     free(send_buf);

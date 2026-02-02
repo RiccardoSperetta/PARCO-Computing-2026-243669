@@ -24,6 +24,9 @@ typedef struct {
 extern MPI_Datatype MPI_EDGE;
 void init_mpi_datatypes(void);
 
+//bfs utility:
+int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, int* distance, int* parent);
+
 //general utility:
 void free_csr(CSR *csr);
 void print_csr_stats(CSR *csr);
@@ -34,7 +37,6 @@ int edge_compare(const void *a, const void *b);
 long partition(Edge *arr, long low, long high);
 void parallel_quicksort(Edge *arr, long low, long high, int depth);
 void sort_edges(Edge *edges, long n_edges);
-
 
 
 

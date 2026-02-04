@@ -1,5 +1,6 @@
 #include "graph_utils.h"
 #include "mpi.h"
+#include <math.h>
 #include <omp.h>
 #include <stdio.h>
 
@@ -60,6 +61,57 @@ int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, in
 
     return local_errors;
 }
+
+void compute_imbalance_metrics(
+    double local_time,
+    double local_comm_time,
+    edge_t local_traversed_edges,
+    double* out_time,
+    double* out_comm_time,
+    double* TEPS,
+    double* out_max_over_mean, 
+    double* out_cv,
+    MPI_Comm comm
+) {
+    int p;
+    MPI_Comm_size(comm, &p);
+
+    double max_time = 0;
+    MPI_Reduce(&local_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+    *out_time = max_time;
+
+    double max_comm_time = 0;
+    MPI_Reduce(&local_comm_time, &max_comm_time, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+    *out_comm_time = max_comm_time;
+
+    edge_t global_TE;
+    MPI_Reduce(&local_traversed_edges, &global_TE, 1, MPI_UINT64_T, MPI_SUM, 0, comm);
+    *TEPS = (double)global_TE / max_time; 
+
+    edge_t global_sum;
+    MPI_Allreduce(&local_traversed_edges, &global_sum, 1, MPI_UINT64_T, MPI_SUM, comm);
+
+    double mean = (double)global_sum / (double)p;
+
+    edge_t global_max;
+    MPI_Allreduce(&local_traversed_edges, &global_max, 1, MPI_UINT64_T, MPI_MAX, comm);
+
+    double max_over_mean = (mean > 0.0) ? (double)global_max / mean : -1.0;
+
+    // CV computation (same as above)
+    double diff = (double)local_traversed_edges - mean;
+    double local_sq = diff * diff;
+    double global_sq_sum;
+    MPI_Allreduce(&local_sq, &global_sq_sum, 1, MPI_DOUBLE, MPI_SUM, comm);
+    double variance = global_sq_sum / (double)p;
+    double stddev = sqrt(variance);
+    double cv = (mean > 0.0) ? stddev / mean : -1.0;
+
+    *out_cv = cv;
+    *out_max_over_mean = max_over_mean;
+}
+
+
 
 void free_csr(CSR *g) {
     if (g) {

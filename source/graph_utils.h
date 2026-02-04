@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <omp.h>
+#include <math.h>
 #include <mpi.h>
 
 typedef uint32_t node_t;
@@ -26,6 +27,16 @@ void init_mpi_datatypes(void);
 
 //bfs utility:
 int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, int* distance, int* parent);
+void compute_imbalance_metrics(
+    double local_time,
+    double local_comm_time,
+    edge_t local_traversed_edges,
+    double* out_time,
+    double* out_comm_time,
+    double* TEPS,
+    double* out_max_over_mean, 
+    double* out_cv,
+    MPI_Comm comm);
 
 //general utility:
 void free_csr(CSR *csr);

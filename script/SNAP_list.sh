@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Shared graphs list for all scripts
-declare -A SNAP_GRAPHS=(
+declare -a SNAP_GRAPHS=(
     "ca-GrQc"
+    "email-Enron"
 )

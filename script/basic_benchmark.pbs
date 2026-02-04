@@ -44,7 +44,7 @@ for graph in data/csr/*; do
         # for 64 different (randomized) search keys
         for i in {1..64}; do
                 # perform hybrid BFS (MPI + OpenMP)
-                mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node:PE=8 --bind-to core ./BFS_hybrid.out 
+                mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node:PE=8 --bind-to core ./BFS_basic.out ${graph} basic${np} 
         done
         echo "$np run is OVER ========"
         echo ""

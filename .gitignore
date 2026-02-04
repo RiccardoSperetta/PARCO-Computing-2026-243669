@@ -1,3 +1,7 @@
+data/raw/*
+data/csr/*
+results/*
+
 # temporary/editor files
 .clangd
 *.tmp

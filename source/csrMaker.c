@@ -7,7 +7,6 @@
 
 CSR* edgelist_to_csr(const char *filename, int directed, int shuffle) {      // REMEMBER: for later pull technique we MUST work with undirected graphs!
     printf("Converting edge list to CSR format...\n");
-    double start_time = omp_get_wtime();
     
     FILE *fp = fopen(filename, "r");
     if (!fp) {

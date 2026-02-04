@@ -1,0 +1,58 @@
+#!/bin/bash
+# Job name
+#PBS -N hybridBFS
+# Output files
+#PBS -o ./hybrid.o
+#PBS -e ./hybrid.e
+# Queue name
+#PBS -q shortCPUQ
+# Set the maximum wall time
+#PBS -l walltime=0:40:00
+# Number of nodes, cpus, mpi processors and amount of memory -> allowing for each MPI process having 8 cores for OpenMP threads parallelization
+#PBS -l select=32:ncpus=32:mpiprocs=4:mem=10gb
+#PBS -l place=scatter
+
+# Modules for python and MPI
+module load GCC/11.2.0
+module load OpenMPI/4.1.1-GCC-11.2.0
+
+gcc --version
+mpicc --version
+
+export OMP_NUM_THREADS=8
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+
+
+# Get the list of unique nodes assigned to the job
+NODES=$(sort -u $PBS_NODEFILE)
+echo The running nodes are $NODES
+
+# Loop through each node and get architecture information
+for NODE in $NODES; do
+    echo "Node: $NODE"
+    ssh $NODE "lscpu"
+done
+
+# Select the working directory 
+cd $PBS_O_WORKDIR
+
+# the code should be previously compiled
+
+# Run the code
+# for each graph (in CSR format)
+for graph in data/csr/*; do
+    # going from 1 to 128 MPI processes
+    echo "[ BENCHMARKING ${graph} with hybrid BFS ]"
+    for np in 1 2 4 8 16 32 64 128; do
+        echo "Running with $np processes"
+        # for 64 different (randomized) search keys
+        for i in {1..64}; do
+                # perform hybrid BFS (MPI + OpenMP)
+                mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node:PE=8 --bind-to core ./BFS_hybrid.out 
+        done
+        echo "$np run is OVER ========"
+        echo ""
+    done
+    echo "[ DONE ${graph} ]"
+done

@@ -1,20 +1,23 @@
 #include <mpi.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <limits.h>
+#include <time.h>
+#include <unistd.h>
 #include "graph_utils.h"
 #include "bitset.h"
-#include <omp.h>            // MPI+x BFS
 
-#define INF UINT_MAX
+#define INF INT_MAX
 
 char output_path[512];
 
 int block_size, rank, p;
 double start_time, local_sol_time;
-double comm_time_start, comm_time_end, local_comm_time = 0.0;
+double comm_time_start, local_comm_time = 0.0;
 
 /* ============================================================================================================================
 ============================================================== BFS ============================================================
@@ -30,13 +33,15 @@ int distributed_bfs(
     node_t local_edges = g.row_ptr[0];
 
     edge_t traversed_edges = 0;
+    //number of errors during BFS execution: all fine if = 0
+    int local_result = 0;
 
     // Visited nodes tracked with a bitset: includes all nodes in the graph but is updated locally
     // = simplest compromise for ghost vertices management
     bitset_t visited = bitset_create(n);
 
     // Local distance vector - stores shortest path distance for each vertex from source
-    int *d = malloc(g.n_vertices * sizeof(int));
+    atomic_int *d = aligned_alloc(64, g.n_vertices * sizeof(atomic_int));
     for (int i = 0; i < g.n_vertices; i++)
         d[i] = INF;
 
@@ -49,7 +54,7 @@ int distributed_bfs(
     bitset_t frontier = bitset_create(g.n_vertices);
     node_t frontier_size = 0;
 
-
+    local_comm_time = 0.0;
     start_time = MPI_Wtime();
     // Initialize: rank owning the source sets distance to 0 and adds to frontier
     if (source >= local_start && source < local_start + g.n_vertices) {
@@ -67,12 +72,10 @@ int distributed_bfs(
     int *send_counts = calloc(p, sizeof(int));
     Edge **send_buf = malloc(p * sizeof(Edge*));
 
-    
 
     /* ==============================================================
     main BFS loop
     ============================================================== */
-    omp_set_num_threads(2);
     while (1) {
         edge_t tmp_edges = 0; //support variable for computing traversed edges
 
@@ -142,8 +145,7 @@ int distributed_bfs(
         MPI_Alltoall(send_counts, 1, MPI_INT,
                      recv_counts, 1, MPI_INT,
                      comm);
-        comm_time_end = MPI_Wtime();
-        local_comm_time += (comm_time_end - comm_time_start);
+        local_comm_time += (MPI_Wtime() - comm_time_start);
         // => each rank knows how many "external visits" it's going to receive
 
 
@@ -177,27 +179,32 @@ int distributed_bfs(
         MPI_Alltoallv(send_flat, send_counts, sdispls, MPI_EDGE,
                       recv_buf, recv_counts, rdispls, MPI_EDGE,
                       comm);
-        comm_time_end = MPI_Wtime();
-        local_comm_time += (comm_time_end - comm_time_start);
+        local_comm_time += (MPI_Wtime() - comm_time_start);
 
     
         // Build next frontier: add unvisited vertices and set parent pointers
         frontier_size = 0;
         bitset_clear(&frontier);
+        
+        int th_frontier_size = 0;
+        #pragma omp parallel for reduction(+:th_frontier_size)
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
             if (e.dst < local_start || e.dst > local_start + g.n_vertices) {
-                printf("wtf: %d->%d arrived in %d\n", e.src, e.dst, rank);
+                local_result++; //not a real problem I just need it to be >0 if something went wrong
                 continue;
             }
             node_t local_v = e.dst - local_start;
-            if (d[local_v] == INF) {
-                d[local_v] = level;
-                parent[local_v] = e.src;            // Set parent to the vertex that discovered this one
-                bitset_set(&frontier, local_v);    // Insert into next frontier
-                frontier_size++;
+            int expected = INF;
+
+            if (atomic_compare_exchange_strong(&d[local_v], &expected, level)) {
+                parent[local_v] = e.src;
+                bitset_set(&frontier, local_v);
+                th_frontier_size++; 
             }
         }
+
+        frontier_size += th_frontier_size;
 
         /* ==============================================================
         * Check global termination: stop if no new vertices were discovered = global frontier is empty
@@ -206,12 +213,10 @@ int distributed_bfs(
         comm_time_start = MPI_Wtime();
         MPI_Allreduce(&frontier_size, &global_frontier, 1,
                       MPI_UINT32_T, MPI_SUM, comm);
-        comm_time_end = MPI_Wtime();
-        local_comm_time += (comm_time_end - comm_time_start);
+        local_comm_time += (MPI_Wtime() - comm_time_start);
 
         if (global_frontier == 0) {
             local_sol_time = MPI_Wtime() - start_time; //rank individual solution time (they should all be quite close)
-            //printf("rank%d spent %.3f seconds\n", rank, end_time-start_time);
         }
 
         // Cleanup temporary buffers
@@ -224,8 +229,10 @@ int distributed_bfs(
         free(recv_buf);
 
         if (global_frontier == 0) { // = all processes don't have any more vertices to explore
-            if(rank == 0) printf("BFS finished at level %d\n", level);            
+            if(rank == 0) printf("BFS finished at level %d\n", level);   
+#ifdef DEBUG
             printf("RANK %d - traversed %ld edges\n", rank, traversed_edges);
+#endif
             break;
         }
 
@@ -236,14 +243,16 @@ int distributed_bfs(
     /* ==============================================================
     * Post BFS validation
     * ============================================================== */
-    int local_result = validate(&g, source, local_start, n, d, parent);
-    /*
-    if (val == 0) {
+    local_result += validate(&g, source, local_start, n, (int*)d, parent);
+
+#ifdef DEBUG
+    if (local_result == 0) {
         printf("All fine on rank %d\n", rank);
     } else {
-        printf("Something's wrong in rank %d: %d errors found\n", rank, val);
+        printf("Something's wrong in rank %d: %d errors found\n", rank, local_result);
     }
-        */
+#endif
+        
     int total_result = 0;
     MPI_Reduce(&local_result, &total_result, 1, MPI_INT, MPI_SUM, 0, comm);
 
@@ -288,15 +297,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    //TODO: define result directory
     const char *filename = argv[1];
     const char *run_specs = argv[2];
     const char *last_slash = strrchr(filename, '/');
     const char *basename = last_slash ? last_slash + 1 : filename;
     char *dot = strchr(basename, '.');
     int basename_len = dot ? (dot - basename) : strlen(basename);
-
-    snprintf(output_path, sizeof(output_path), "results/%.*s/%s.txt", basename_len, basename, run_specs);
+    
+    if (strncmp(basename, "kronecker", 9) == 0) {
+        snprintf(output_path, sizeof(output_path), "results/weak_scaling/%s.txt", run_specs);
+    } else {
+        snprintf(output_path, sizeof(output_path), "results/%.*s/%s.txt", basename_len, basename, run_specs);
+    }
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
@@ -307,9 +319,6 @@ int main(int argc, char **argv) {
     graph.n_vertices = 0;
     graph.n_edges = 0;
 
-    // TODO: either randomize or selected as a program argument...
-    node_t source = 0;
-    edge_t start, end;
     node_t total_vertices;
 
     /* ============================================================== 
@@ -320,6 +329,12 @@ int main(int argc, char **argv) {
 
     // manually making the node_t and edge_t types match with MPI datatypes
     MPI_File_read_at(handle, 0, &total_vertices, 1, MPI_UINT32_T, NULL);
+
+    srand(7);
+    node_t search_keys[64];
+    for (int i = 0; i < 64; i++) {
+        search_keys[i] = rand() % total_vertices; //source is always randomized across all possible graph IDs
+    }
 
     block_size = (total_vertices + p - 1) / p; //ceil division
     // now each rank can compute its offset in order to start reading row_ptr:
@@ -337,6 +352,7 @@ int main(int argc, char **argv) {
                     graph.n_vertices+1, MPI_UINT64_T, NULL);
     // now each rank also knows what portion of col_idx it must take care of:
 
+    edge_t start, end;
     start = graph.row_ptr[0];
     end = graph.row_ptr[graph.n_vertices];
     graph.n_edges = end-start;          //each process will own all the outgoing edges of the nodes they own
@@ -350,19 +366,24 @@ int main(int argc, char **argv) {
     MPI_File_close(&handle);
 
     #ifdef DEBUG
-    printf("%d with local start = %d\n", rank, rank*block_size);
+    printf("RANK %d - %d vertices and %ld edges, going from %ld to %ld\n", rank, graph.n_vertices, graph.n_edges, start, start + graph.n_edges);
     print_csr_stats(&graph);
     #endif
-
-    printf("RANK %d - %d vertices and %ld edges, going from %ld to %ld\n", rank, graph.n_vertices, graph.n_edges, start, start + graph.n_edges);
-    //print_csr_stats(&graph);
-
-    //TODO: determine a complete "local_start" array for each process - especially for direction optimizing
 
     /* ============================================================== 
     STEP 2: BFS algorithm
     ============================================================== */
-    int result = distributed_bfs(graph, rank*block_size, total_vertices, source, MPI_COMM_WORLD);
+    int result = 0;
+    for (int i=0; i<64; i++) {
+        if (rank == 0) printf("run %d\n", i);
+        result += distributed_bfs(graph, rank*block_size, total_vertices, search_keys[i], MPI_COMM_WORLD);
+        if (result != 0) {
+            fprintf(stderr, "BFS #%d produced an incorrect BFS tree\n", i);
+            break;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    
 
     free_csr(&graph);
 

@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
     const char *basename = last_slash ? last_slash + 1 : filename;
     char *dot = strchr(basename, '.');
     int basename_len = dot ? (dot - basename) : strlen(basename);
-    
+
     if (strncmp(basename, "kronecker", 9) == 0) {
         snprintf(output_path, sizeof(output_path), "results/weak_scaling/%s.txt", run_specs);
     } else {
@@ -352,6 +352,9 @@ int main(int argc, char **argv) {
     int result = 0;
     for (int i=0; i<64; i++) {
         if (rank == 0) printf("run %d\n", i);
+        if (i == 27) {
+            printf("RANK %d - %d vertices and %ld edges, going from %ld to %ld\n", rank, graph.n_vertices, graph.n_edges, start, start + graph.n_edges);
+        }
         result += distributed_bfs(graph, rank*block_size, total_vertices, search_keys[i], MPI_COMM_WORLD);
         if (result != 0) {
             fprintf(stderr, "BFS #%d produced an incorrect BFS tree\n", i);
@@ -366,6 +369,7 @@ int main(int argc, char **argv) {
     MPI_Type_free(&MPI_EDGE);
     MPI_Finalize();
     if(result != 0) { //something, based on the validate function, went wrong
+        fprintf(stderr, "Something went wrong with this BFS\n");
         return 1;
     }
 

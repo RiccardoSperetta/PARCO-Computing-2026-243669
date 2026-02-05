@@ -25,10 +25,14 @@ int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, in
         if (p == -1) continue;                    // unreachable
 
         if (global_v == source) {                      // source must be parent of itself and be at distance = 0
-            if (p != source || distance[global_v] != 0) local_errors++;
+            if (p != source || distance[v] != 0) {
+                local_errors++;
+                printf("wrong source management: source=%d, parent=%d, distance=%d\n", source, p, distance[v]);
+            } 
         } else {
             if (p < 0 || p >= global_nverts || p == global_v) { // out of range condition + multiple sources
                 local_errors++;
+                printf("out of range\n");
                 continue;
             }
 
@@ -42,12 +46,14 @@ int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, in
             }
             if (edge_exists != 1) {
                 local_errors++;
+                printf("edge not found\n");
                 continue;
             }
 
             // BFS tree distance invariant
             if (p >= local_start && p < local_start + g->n_vertices) { //for local vertices immediate check
                 if (distance[v] != distance[p-local_start]+1) {
+                    printf("Distance not matching\n");
                     local_errors++;
                 }
             } 

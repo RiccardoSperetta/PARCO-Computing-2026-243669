@@ -31,7 +31,13 @@ for file in data/raw/*; do
         exit 1
     fi
 
-    mkdir -p "results/${graph}" # already setup for storing results
+    # setup for results folder
+    if [[ "${graph}" == kronecker* ]]; then
+        mkdir -p "results/weak_scaling"
+    else
+        mkdir -p "results/${graph}"
+    fi
+    
 
 done
 

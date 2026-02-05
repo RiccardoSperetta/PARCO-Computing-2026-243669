@@ -10,6 +10,7 @@
 #include <math.h>
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
@@ -276,8 +277,8 @@ void generate_kronecker_range(
 main for basic testing of generation
 ==================================== */
 int main(int argc, char** argv) {
-  if (argc != 3) {
-    printf("Usage: %s <scale> <edgefactor>\n", argv[0]);
+  if (argc != 4) {
+    printf("Usage: %s <scale> <edgefactor> <np>\n", argv[0]);
     return 1;
   }
 
@@ -288,14 +289,19 @@ int main(int argc, char** argv) {
   int edge_factor = atoi(argv[2]);
   int64_t num_edges = N * edge_factor;
   
-  packed_edge edges[num_edges];
+  packed_edge* edges = malloc(num_edges*sizeof(packed_edge));
   
   generate_kronecker_range(seed, scale, 0, num_edges, edges);
   
   printf("Generated %ld edges for Kronecker graph with 2^%d vertices:\n", num_edges, scale);
-  for (int64_t i = 0; i < 10; ++i) {
-    printf("Edge %ld: %ld -> %ld\n", i, edges[i].v0, edges[i].v1);
+  char filename[256];
+  sprintf(filename, "data/raw/kronecker%s.txt", argv[3]); // graph expected to be processed by <np> processes 
+  FILE* fp = fopen(filename, "w");
+  for (int64_t i = 0; i < num_edges; ++i) {
+    fprintf(fp, "%ld %ld\n", edges[i].v0, edges[i].v1);
   }
+
+  free(edges);
   
   return 0;
 }

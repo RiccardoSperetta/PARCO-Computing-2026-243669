@@ -8,7 +8,7 @@ SOURCES = source/graph_utils.c source/bitset.c
 HEADERS = source/graph_utils.h source/bitset.h
 
 # Executables
-TARGETS = csrMaker.out BFS_basic.out BFS_hybrid.out
+TARGETS = csrMaker.out BFS_basic.out BFS_hybrid.out generator.out
 
 # Default target
 all: $(TARGETS)
@@ -19,13 +19,15 @@ csrMaker.out: source/csrMaker.c $(SOURCES) $(HEADERS)
 
 # Build basic distributed BFS
 BFS_basic.out: source/BFS_basic.c $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) source/BFS_hybrid.c $(SOURCES) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) source/BFS_basic.c $(SOURCES) -o $@ $(LDFLAGS)
 
 
 # Build hybrid BFS
 BFS_hybrid.out: source/BFS_hybrid.c $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) source/BFS_hybrid.c $(SOURCES) -o $@ $(LDFLAGS)
 
+generator.out: generator/graph_generator.c generator/splittable_mrg.c generator/user_settings.h
+	gcc $(CFLAGS) generator/graph_generator.c generator/splittable_mrg.c generator/user_settings.h -o $@ $(LDFLAGS)
 
 # Clean build artifacts
 clean:

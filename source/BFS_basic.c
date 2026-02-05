@@ -31,6 +31,8 @@ int distributed_bfs(
     node_t local_edges = g.row_ptr[0];
 
     edge_t traversed_edges = 0;
+    //number of errors during BFS execution: all fine if = 0
+    int local_result = 0;
 
     // Visited nodes tracked with a bitset: includes all nodes in the graph but is updated locally
     // = simplest compromise for ghost vertices management
@@ -167,7 +169,8 @@ int distributed_bfs(
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
             if (e.dst < local_start || e.dst > local_start + g.n_vertices) {
-                printf("wtf: %d->%d arrived in %d\n", e.src, e.dst, rank);
+                fprintf(stderr, "ERROR: %d->%d arrived in %d\n", e.src, e.dst, rank);
+                local_result++;
                 continue;
             }
             node_t local_v = e.dst - local_start;
@@ -202,8 +205,10 @@ int distributed_bfs(
         free(recv_buf);
 
         if (global_frontier == 0) { // = all processes don't have any more vertices to explore
-            if(rank == 0) printf("BFS finished at level %d\n", level);            
+            if(rank == 0) printf("BFS finished at level %d\n", level);   
+#ifdef DEBUG
             printf("RANK %d - traversed %ld edges\n", rank, traversed_edges);
+#endif
             break;
         }
 
@@ -214,13 +219,15 @@ int distributed_bfs(
     /* ==============================================================
     * Post BFS validation
     * ============================================================== */
-    int local_result = validate(&g, source, local_start, n, d, parent);
+    local_result += validate(&g, source, local_start, n, d, parent);
 
+#ifdef DEBUG
     if (local_result == 0) {
         printf("All fine on rank %d\n", rank);
     } else {
         printf("Something's wrong in rank %d: %d errors found\n", rank, local_result);
     }
+#endif
         
     int total_result = 0;
     MPI_Reduce(&local_result, &total_result, 1, MPI_INT, MPI_SUM, 0, comm);
@@ -272,8 +279,12 @@ int main(int argc, char **argv) {
     const char *basename = last_slash ? last_slash + 1 : filename;
     char *dot = strchr(basename, '.');
     int basename_len = dot ? (dot - basename) : strlen(basename);
-
-    snprintf(output_path, sizeof(output_path), "results/%.*s/%s.txt", basename_len, basename, run_specs);
+    
+    if (strncmp(basename, "kronecker", 9) == 0) {
+        snprintf(output_path, sizeof(output_path), "results/weak_scaling/%s.txt", run_specs);
+    } else {
+        snprintf(output_path, sizeof(output_path), "results/%.*s/%s.txt", basename_len, basename, run_specs);
+    }
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &p);

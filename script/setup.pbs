@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=0:02:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=1:ncpus=4:mem=10gb
+#PBS -l select=1:ncpus=4:mem=20gb
 
 # Modules for python and MPI
 module load GCC/11.2.0
@@ -23,11 +23,12 @@ cd $PBS_O_WORKDIR
 
 make
 
+scale=21
 # generate with R-MAT all the needed graphs
-for np in 1 2 4 8 16 32 64; do
-    scale=$((22 + log2(np)))
+for np in 1 2 4 8 16 32 64 128; do
+    scale=$((scale+1))
     ./generator.out $scale 16 $np
 done
 
 # convert all .txt graphs into CSR
-./script/build_listh.sh
+./script/build_list.sh

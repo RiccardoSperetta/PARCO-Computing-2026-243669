@@ -34,9 +34,14 @@ cd $PBS_O_WORKDIR
 
 # the code should be previously compiled
 
-# Run the code
+# STRONG SCALING
 # for each graph (in CSR format)
-for graph in data/csr/*; do
+for graph in data/csr/*.bin; do
+    # ignore R-MAT for now
+    if [[ "${graph}" == data/csr/kronecker* ]]; then
+        continue
+    done
+
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with basic BFS ]"
     for np in 1 2 4 8 16 32 64 128; do
@@ -49,5 +54,7 @@ for graph in data/csr/*; do
     echo "[ DONE ${graph} ]"
 done
 
+# WEAK SCALING
+for graph in data/csr/kronecker*.bin; do
 
-# TODO: figure out weak scaling
+done

@@ -8,7 +8,7 @@ echo "[ Building CSR for all graphs ]"
 for file in data/raw/*; do
     graph=$(basename "$file" .txt)
     csr_file="data/csr/${graph}.bin"
-    undirected=0
+    directed=0 #assuming default edge lists need to be doubled (for each a->b add also b->a)
 
     if [ ! -f "${file}" ]; then
         echo "Error: ${file} not found"
@@ -19,10 +19,10 @@ for file in data/raw/*; do
     fi
 
     if [[ -v SNAP_GRAPHS["${graph}"] ]]; then
-        undirected=${SNAP_GRAPHS["${graph}"]}
+        directed=${SNAP_GRAPHS["${graph}"]}
     fi
 
-    ./csrMaker.out ${file} ${undirected} 0 # - not shuffling
+    ./csrMaker.out ${file} ${directed} 0 # - not shuffling
 
     if [ $? -eq 0 ]; then
         echo "Success: CSR built in ${csr_file}"

@@ -302,6 +302,7 @@ int main(int argc, char** argv) {
   }
 
   free(edges);
+  fclose(fp);
   
   return 0;
 }

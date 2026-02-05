@@ -1,15 +1,15 @@
 #!/bin/bash
 # Job name
-#PBS -N name
+#PBS -N setup
 # Output files
-#PBS -o ./name.o
-#PBS -e ./name.e
+#PBS -o ./setup.o
+#PBS -e ./setup.e
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:02:00
+#PBS -l walltime=0:30:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=1:ncpus=4:mem=20gb
+#PBS -l select=1:ncpus=4:mem=40gb
 
 # Modules for python and MPI
 module load GCC/11.2.0
@@ -23,11 +23,12 @@ cd $PBS_O_WORKDIR
 
 make
 
-scale=21
+scale=20
 # generate with R-MAT all the needed graphs
-for np in 1 2 4 8 16 32 64 128; do
-    scale=$((scale+1))
+for np in 8 16 32 64 128 256; do
+    echo "generating graph with scale $scale and edge factor 16"
     ./generator.out $scale 16 $np
+    scale=$((scale+1))
 done
 
 # convert all .txt graphs into CSR

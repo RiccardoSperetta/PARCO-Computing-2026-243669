@@ -4,6 +4,8 @@ results/*
 
 !**/.gitkeep
 
+*.out
+
 # temporary/editor files
 .clangd
 *.tmp

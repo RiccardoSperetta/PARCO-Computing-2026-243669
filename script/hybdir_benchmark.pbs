@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=0:40:00
 # Number of nodes, cpus, mpi processors and amount of memory -> allowing for each MPI process having 8 cores for OpenMP threads parallelization
-#PBS -l select=32:ncpus=32:mpiprocs=4:mem=10gb
+#PBS -l select=4:ncpus=64:mpiprocs=64:mem=64gb
 #PBS -l place=scatter
 
 # Modules for python and MPI
@@ -37,14 +37,14 @@ done
 # Select the working directory 
 cd $PBS_O_WORKDIR
 
-# the code should be previously compiled
+# the code should be previously compiled with make
 
 # Run the code
 # for each graph (in CSR format)
 for graph in data/csr/*; do
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with hybrid BFS ]"
-    for np in 1 2 4 8 16 32 64 128; do
+    for np in 1 2 4 8 16 32; do
         echo "Running with $np processes"
         # for 64 different (randomized) search keys
         for i in {1..64}; do

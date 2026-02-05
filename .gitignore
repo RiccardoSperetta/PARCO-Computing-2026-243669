@@ -2,6 +2,8 @@ data/raw/*
 data/csr/*
 results/*
 
+!**/.gitkeep
+
 # temporary/editor files
 .clangd
 *.tmp

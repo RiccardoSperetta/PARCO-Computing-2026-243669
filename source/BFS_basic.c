@@ -168,7 +168,7 @@ int distributed_bfs(
         bitset_clear(&frontier);
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
-            if (e.dst < local_start || e.dst > local_start + g.n_vertices) {
+            if (e.dst < local_start || e.dst >= local_start + g.n_vertices) {
                 fprintf(stderr, "ERROR: %d->%d arrived in %d\n", e.src, e.dst, rank);
                 local_result++;
                 continue;

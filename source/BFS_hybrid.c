@@ -1,4 +1,5 @@
 #include <mpi.h>
+#include <omp.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -82,6 +83,7 @@ int distributed_bfs(
         /* ==============================================================
         * Exploration of local frontier with allocation for the outgoing edges of frontier nodes
         * ============================================================ */
+    //beside from a trivial reduction and a small manual reduction on the send_counts array the parallelization is trivial
         #pragma omp parallel reduction(+:tmp_edges)
         {
             //if (rank == 0) printf("using %d threads\n", omp_get_num_threads());
@@ -120,6 +122,8 @@ int distributed_bfs(
         }
 
         // Populate send_buf with edges to be sent
+    // Parallelizing this loop appeared to be not worth since the multiple contentions on
+    // visited bitset but most importantly the allocation of send_buf which would have to be subject of a reduction (one for each rank)
         for (node_t i = 0; i < g.n_vertices; i++) {
             if(bitset_test(&frontier, i)) {
                 for (node_t e = g.row_ptr[i] - local_edges; e < g.row_ptr[i + 1] - local_edges; e++) {
@@ -190,8 +194,8 @@ int distributed_bfs(
         #pragma omp parallel for reduction(+:th_frontier_size)
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
-            if (e.dst < local_start || e.dst > local_start + g.n_vertices) {
-                local_result++; //not a real problem I just need it to be >0 if something went wrong
+            if (e.dst < local_start || e.dst >= local_start + g.n_vertices) {
+                local_result++; //RACE CONDITION - not a real problem I just need it to be >0 if something went wrong
                 continue;
             }
             node_t local_v = e.dst - local_start;
@@ -199,8 +203,9 @@ int distributed_bfs(
 
             //instead of going for an omp critical section:
             if (atomic_compare_exchange_strong(&d[local_v], &expected, level)) {
+                //only ONE thread will access this code
                 parent[local_v] = e.src;
-                bitset_set(&frontier, local_v);
+                bitset_set_atomic(&frontier, local_v); // = avoids race conditions on the update of bitset frontier
                 th_frontier_size++; 
             }
         }
@@ -230,8 +235,8 @@ int distributed_bfs(
         free(recv_buf);
 
         if (global_frontier == 0) { // = all processes don't have any more vertices to explore
-            if(rank == 0) printf("BFS finished at level %d\n", level);   
 #ifdef DEBUG
+            if(rank == 0) printf("BFS finished at level %d\n", level);   
             printf("RANK %d - traversed %ld edges\n", rank, traversed_edges);
 #endif
             break;
@@ -265,6 +270,9 @@ int distributed_bfs(
     double total_time, total_comm_time;
     double TEPS;
     double max_over_mean, cv = 0;
+#ifdef DEBUG
+    printf("RANK %d - traversed %lu edges\n", rank, traversed_edges);
+#endif
     compute_imbalance_metrics(local_sol_time, local_comm_time, traversed_edges, &total_time, &total_comm_time, &TEPS, &max_over_mean, &cv, comm);
 
     if (rank == 0) { //rank responsible for writing results
@@ -298,13 +306,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (rank == 0) printf("using %d OpenMP threads per rank\n", omp_get_max_threads());
+
     const char *filename = argv[1];
     const char *run_specs = argv[2];
     const char *last_slash = strrchr(filename, '/');
     const char *basename = last_slash ? last_slash + 1 : filename;
-    char *dot = strchr(basename, '.');
+    char *dot = strrchr(basename, '.');
     int basename_len = dot ? (dot - basename) : strlen(basename);
-    
+
     if (strncmp(basename, "kronecker", 9) == 0) {
         snprintf(output_path, sizeof(output_path), "results/weak_scaling/%s.txt", run_specs);
     } else {
@@ -331,7 +341,7 @@ int main(int argc, char **argv) {
     // manually making the node_t and edge_t types match with MPI datatypes
     MPI_File_read_at(handle, 0, &total_vertices, 1, MPI_UINT32_T, NULL);
 
-    srand(7);
+    srand(11);
     node_t search_keys[64];
     for (int i = 0; i < 64; i++) {
         search_keys[i] = rand() % total_vertices; //source is always randomized across all possible graph IDs
@@ -376,7 +386,9 @@ int main(int argc, char **argv) {
     ============================================================== */
     int result = 0;
     for (int i=0; i<64; i++) {
+#ifdef DEBUG
         if (rank == 0) printf("run %d\n", i);
+#endif
         result += distributed_bfs(graph, rank*block_size, total_vertices, search_keys[i], MPI_COMM_WORLD);
         if (result != 0) {
             fprintf(stderr, "BFS #%d produced an incorrect BFS tree\n", i);
@@ -391,6 +403,7 @@ int main(int argc, char **argv) {
     MPI_Type_free(&MPI_EDGE);
     MPI_Finalize();
     if(result != 0) { //something, based on the validate function, went wrong
+        fprintf(stderr, "Something went wrong with this BFS\n");
         return 1;
     }
 

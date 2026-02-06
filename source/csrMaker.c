@@ -135,8 +135,8 @@ CSR* edgelist_to_csr(const char *filename, int directed, int shuffle) {      // 
     printf("STEP 5: Sorting %ld edges...\n", n_edges);
 #ifdef _OPENMP
     double sort_start = omp_get_wtime();
-    sort_edges(edges, n_edges);
-    //qsort(edges, n_edges, sizeof(Edge), edge_compare);
+    //sort_edges(edges, n_edges);
+    qsort(edges, n_edges, sizeof(Edge), edge_compare);
     printf("Sorting took %.2f seconds\n", omp_get_wtime() - sort_start);
 #endif
 

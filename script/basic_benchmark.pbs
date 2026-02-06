@@ -41,7 +41,7 @@ for graph in data/csr/*.bin; do
     # ignore R-MAT for now
     if [[ "${graph}" == data/csr/kronecker* ]]; then
         continue
-    done
+    fi
 
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with basic BFS ]"

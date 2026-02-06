@@ -197,6 +197,7 @@ int distributed_bfs(
             node_t local_v = e.dst - local_start;
             int expected = INF;
 
+            //instead of going for an omp critical section:
             if (atomic_compare_exchange_strong(&d[local_v], &expected, level)) {
                 parent[local_v] = e.src;
                 bitset_set(&frontier, local_v);

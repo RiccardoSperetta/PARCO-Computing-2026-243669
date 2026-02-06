@@ -7,7 +7,7 @@
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:40:00
+#PBS -l walltime=0:45:00
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
 # In order to maximize the inter-node distribution
@@ -33,6 +33,9 @@ done
 # Select the working directory 
 cd $PBS_O_WORKDIR
 
+echo "============================================"
+echo "Job started at: $(date '+%Y-%m-%d %H:%M:%S')"
+
 make
 
 # STRONG SCALING
@@ -49,8 +52,8 @@ for graph in data/csr/*.bin; do
         echo "Running with $np processes"
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $np --hostfile $PBS_NODEFILE \
-            --map-by core --bind-to core \
-            --display-map \
+            --map-by node --bind-to core \
+            --report-bindings \
             ./BFS_basic.out ${graph} basic${np}
         echo "======== $np run is OVER ========"
         echo "======== $np run is OVER ========" >> basic.e
@@ -66,11 +69,13 @@ for graph in data/csr/kronecker*.bin; do
     echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
     echo ""
     mpirun -np $number --hostfile $PBS_NODEFILE \
-            --map-by core --bind-to core \
-            --display-map \
+            --map-by node --bind-to core \
+            --report-bindings \
             ./BFS_basic.out ${graph} basic${number}
     echo "[ DONE ${graph} ]"
     echo ""
 done
 
 echo "[ DONE basic BFS benchmark ]"
+echo "============================================"
+echo "Job finished  at: $(date '+%Y-%m-%d %H:%M:%S')"

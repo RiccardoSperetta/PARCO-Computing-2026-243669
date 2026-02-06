@@ -7,7 +7,7 @@
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:30:00
+#PBS -l walltime=0:40:00
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
 # In order to maximize the inter-node distribution
@@ -48,8 +48,12 @@ for graph in data/csr/*.bin; do
     for np in 8 16 32 64 128; do
         echo "Running with $np processes"
         # for 64 different (randomized) search keys (repetitions inside the program)
-        mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node --bind-to core ./BFS_basic.out ${graph} basic${np} 
-        echo "$np run is OVER ========"
+        mpirun -np $np --hostfile $PBS_NODEFILE \
+            --map-by core --bind-to core \
+            --display-map \
+            ./BFS_basic.out ${graph} basic${np}
+        echo "======== $np run is OVER ========"
+        echo "======== $np run is OVER ========" >> basic.e
         echo ""
     done
     echo "[ DONE ${graph} ]"
@@ -59,9 +63,14 @@ done
 for graph in data/csr/kronecker*.bin; do
     # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
-    echo "Running Kronecker generated graph for ${number} cores"
-    mpirun -np $number --hostfile $PBS_NODEFILE --report-bindings --map-by node --bind-to core ./BFS_basic.out ${graph} basic${number}
+    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
+    echo ""
+    mpirun -np $number --hostfile $PBS_NODEFILE \
+            --map-by core --bind-to core \
+            --display-map \
+            ./BFS_basic.out ${graph} basic${number}
     echo "[ DONE ${graph} ]"
+    echo ""
 done
 
 echo "[ DONE basic BFS benchmark ]"

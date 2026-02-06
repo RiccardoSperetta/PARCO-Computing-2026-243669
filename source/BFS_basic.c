@@ -205,8 +205,8 @@ int distributed_bfs(
         free(recv_buf);
 
         if (global_frontier == 0) { // = all processes don't have any more vertices to explore
-            if(rank == 0) printf("BFS finished at level %d\n", level);   
 #ifdef DEBUG
+            if(rank == 0) printf("BFS finished at level %d\n", level);   
             printf("RANK %d - traversed %ld edges\n", rank, traversed_edges);
 #endif
             break;
@@ -251,7 +251,6 @@ int distributed_bfs(
             perror("Error opening file");
             return 1;
         }
-        fprintf(stdout, "%e %e %e %f %f\n", total_time, total_comm_time, TEPS, max_over_mean, cv);
         fprintf(results, "%e %e %e %f %f\n", total_time, total_comm_time, TEPS, max_over_mean, cv);
     }
 

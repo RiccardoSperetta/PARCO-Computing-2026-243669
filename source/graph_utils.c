@@ -17,7 +17,6 @@ int validate(CSR *g, node_t source, node_t local_start, node_t global_nverts, in
     int local_errors = 0;
     edge_t local_edges = g->row_ptr[0];
 
-    // TODO: maybe consider only some vertices
     for (node_t v = 0; v < g->n_vertices; v++) {
         node_t global_v = v + local_start;           
         node_t p = parent[v];

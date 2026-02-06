@@ -25,7 +25,7 @@ make
 
 scale=20
 # generate with R-MAT all the needed graphs
-for np in 8 16 32 64 128 256; do
+for np in 8 16 32 64 128; do
     if [ -f "data/raw/kronecker$np.txt" ]; then
         echo "kronecker$np already exists, skipping..."
         continue

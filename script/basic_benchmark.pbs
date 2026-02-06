@@ -7,9 +7,10 @@
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:40:00
-# Number of nodes, cpus, mpi processors and amount of memory -> allowing for each MPI process having 8 cores for OpenMP threads parallelization
-#PBS -l select=4:ncpus=64:mpiprocs=64:mem=64gb
+#PBS -l walltime=0:30:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
+# In order to maximize the inter-node distribution
 #PBS -l place=scatter
 
 # Modules for python and MPI
@@ -32,7 +33,7 @@ done
 # Select the working directory 
 cd $PBS_O_WORKDIR
 
-# the code should be previously compiled with make
+make
 
 # STRONG SCALING
 # for each graph (in CSR format)
@@ -44,7 +45,7 @@ for graph in data/csr/*.bin; do
 
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with basic BFS ]"
-    for np in 8 16 32 64 128 256; do
+    for np in 8 16 32 64 128; do
         echo "Running with $np processes"
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node --bind-to core ./BFS_basic.out ${graph} basic${np} 
@@ -56,8 +57,11 @@ done
 
 # WEAK SCALING
 for graph in data/csr/kronecker*.bin; do
-    # Extract the number in the filename, intended to indicate the amount of cores dedicated for it
+    # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
-    echo "Processing graph intended for $number cores"
-
+    echo "Running Kronecker generated graph for ${number} cores"
+    mpirun -np $number --hostfile $PBS_NODEFILE --report-bindings --map-by node --bind-to core ./BFS_basic.out ${graph} basic${number}
+    echo "[ DONE ${graph} ]"
 done
+
+echo "[ DONE basic BFS benchmark ]"

@@ -5,7 +5,7 @@
 #   0 = assumed directed OR undirected but without the b->a edge => will be turned into undirected graph
 declare -A SNAP_GRAPHS=(
     ["com-dblp"]=0
+    ["com-lj.ungraph"]=0
     ["as-skitter"]=0
     ["com-orkut"]=0
-    ["ca-AstroPh"]=1
 )

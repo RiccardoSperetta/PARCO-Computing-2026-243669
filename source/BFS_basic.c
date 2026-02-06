@@ -240,7 +240,9 @@ int distributed_bfs(
     double total_time, total_comm_time;
     double TEPS;
     double max_over_mean, cv = 0;
+#ifdef DEBUG
     printf("RANK %d - traversed %lu edges\n", rank, traversed_edges);
+#endif
     compute_imbalance_metrics(local_sol_time, local_comm_time, traversed_edges, &total_time, &total_comm_time, &TEPS, &max_over_mean, &cv, comm);
 
     if (rank == 0) { //rank responsible for writing results
@@ -249,6 +251,7 @@ int distributed_bfs(
             perror("Error opening file");
             return 1;
         }
+        fprintf(stdout, "%e %e %e %f %f\n", total_time, total_comm_time, TEPS, max_over_mean, cv);
         fprintf(results, "%e %e %e %f %f\n", total_time, total_comm_time, TEPS, max_over_mean, cv);
     }
 
@@ -278,7 +281,7 @@ int main(int argc, char **argv) {
     const char *run_specs = argv[2];
     const char *last_slash = strrchr(filename, '/');
     const char *basename = last_slash ? last_slash + 1 : filename;
-    char *dot = strchr(basename, '.');
+    char *dot = strrchr(basename, '.');
     int basename_len = dot ? (dot - basename) : strlen(basename);
 
     if (strncmp(basename, "kronecker", 9) == 0) {
@@ -307,7 +310,7 @@ int main(int argc, char **argv) {
     // manually making the node_t and edge_t types match with MPI datatypes
     MPI_File_read_at(handle, 0, &total_vertices, 1, MPI_UINT32_T, NULL);
 
-    srand(7);
+    srand(11);
     node_t search_keys[64];
     for (int i = 0; i < 64; i++) {
         search_keys[i] = rand() % total_vertices; //source is always randomized across all possible graph IDs
@@ -352,10 +355,9 @@ int main(int argc, char **argv) {
     ============================================================== */
     int result = 0;
     for (int i=0; i<64; i++) {
+#ifdef DEBUG
         if (rank == 0) printf("run %d\n", i);
-        if (i == 27) {
-            printf("RANK %d - %d vertices and %ld edges, going from %ld to %ld\n", rank, graph.n_vertices, graph.n_edges, start, start + graph.n_edges);
-        }
+#endif
         result += distributed_bfs(graph, rank*block_size, total_vertices, search_keys[i], MPI_COMM_WORLD);
         if (result != 0) {
             fprintf(stderr, "BFS #%d produced an incorrect BFS tree\n", i);

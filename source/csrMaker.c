@@ -135,8 +135,8 @@ CSR* edgelist_to_csr(const char *filename, int directed, int shuffle) {      // 
     printf("STEP 5: Sorting %ld edges...\n", n_edges);
 #ifdef _OPENMP
     double sort_start = omp_get_wtime();
-    //sort_edges(edges, n_edges);
-    qsort(edges, n_edges, sizeof(Edge), edge_compare);
+    sort_edges(edges, n_edges);
+    //qsort(edges, n_edges, sizeof(Edge), edge_compare);
     printf("Sorting took %.2f seconds\n", omp_get_wtime() - sort_start);
 #endif
 
@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
         const char *filename = argv[1];
         const char *last_slash = strrchr(filename, '/'); // = returns a pointer to the last occurrence of the character c in the string s.
         const char *basename = last_slash ? last_slash + 1 : filename;
-        char *dot = strchr(basename, '.');
+        char *dot = strrchr(basename, '.');
         int basename_len = dot ? (dot - basename) : strlen(basename);
 
         snprintf(output_path, sizeof(output_path), "data/csr/%.*s.bin", basename_len, basename);

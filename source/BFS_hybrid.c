@@ -264,7 +264,6 @@ int distributed_bfs(
     double total_time, total_comm_time;
     double TEPS;
     double max_over_mean, cv = 0;
-    printf("RANK %d - traversed %lu edges\n", rank, traversed_edges);
     compute_imbalance_metrics(local_sol_time, local_comm_time, traversed_edges, &total_time, &total_comm_time, &TEPS, &max_over_mean, &cv, comm);
 
     if (rank == 0) { //rank responsible for writing results

@@ -7,9 +7,10 @@
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:40:00
-# Number of nodes, cpus, mpi processors and amount of memory -> allowing for each MPI process having 8 cores for OpenMP threads parallelization
-#PBS -l select=4:ncpus=64:mpiprocs=64:mem=64gb
+#PBS -l walltime=0:45:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=4:ncpus=32:mpiprocs=4:mem=32gb
+# In order to maximize the inter-node distribution
 #PBS -l place=scatter
 
 # Modules for python and MPI
@@ -18,11 +19,6 @@ module load OpenMPI/4.1.1-GCC-11.2.0
 
 gcc --version
 mpicc --version
-
-export OMP_NUM_THREADS=8
-export OMP_PROC_BIND=close
-export OMP_PLACES=cores
-
 
 # Get the list of unique nodes assigned to the job
 NODES=$(sort -u $PBS_NODEFILE)
@@ -34,25 +30,74 @@ for NODE in $NODES; do
     ssh $NODE "lscpu"
 done
 
+export OMP_NUM_THREADS=8
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+
+
 # Select the working directory 
 cd $PBS_O_WORKDIR
 
-# the code should be previously compiled with make
+echo "============================================"
+echo "Job started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
-# Run the code
+make
+
+# STRONG SCALING
 # for each graph (in CSR format)
-for graph in data/csr/*; do
+for graph in data/csr/*.bin; do
+    # ignore R-MAT for now
+    if [[ "${graph}" == data/csr/kronecker* ]]; then
+        continue
+    fi
+
+    # Determine the results directory name based on the graph name
+    dir="results/$(basename "${graph}" .bin)"
+
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with hybrid BFS ]"
-    for np in 1 2 4 8 16 32; do
+    for np in 8 16 32 64 128; do
+        # if the results file already exists: skip
+        if [[ -f "${dir}/hybrid${np}" ]]; then
+            continue
+        fi
+
+        # since we're using 8 cores per MPI process:
+        adjusted=$((np/8))
+
         echo "Running with $np processes"
-        # for 64 different (randomized) search keys
-        for i in {1..64}; do
-                # perform hybrid BFS (MPI + OpenMP)
-                mpirun -np $np --hostfile $PBS_NODEFILE --report-bindings --map-by node:PE=8 --bind-to core ./BFS_hybrid.out  ${graph} hybrid${np} 
-        done
-        echo "$np run is OVER ========"
+        # for 64 different (randomized) search keys (repetitions inside the program)
+        mpirun -np $np --hostfile $PBS_NODEFILE \
+            --map-by ppr:4:node --bind-to core \
+            --report-bindings \
+            ./BFS_hybrid.out ${graph} hybrid${np}
+        echo "======== $np run is OVER ========"
+        echo "======== $np run is OVER ========" >> hybrid.e
         echo ""
     done
     echo "[ DONE ${graph} ]"
 done
+
+# WEAK SCALING
+for graph in data/csr/kronecker*.bin; do
+    # Extract the number in the filename
+    number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
+    # since we're using 8 cores per MPI process:
+    adjusted=$((number/8))
+    if [[ -f "results/weak_scaling/hybrid${np}" ]]; then
+        continue
+    fi
+
+    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
+    echo ""
+    mpirun -np $adjusted --hostfile $PBS_NODEFILE \
+            --map-by ppr:4:node --bind-to core \
+            --report-bindings \
+            ./BFS_hybrid.out ${graph} hybrid${number}
+    echo "[ DONE ${graph} ]"
+    echo ""
+done
+
+echo "[ DONE hybrid BFS benchmark ]"
+echo "============================================"
+echo "Job finished  at: $(date '+%Y-%m-%d %H:%M:%S')"

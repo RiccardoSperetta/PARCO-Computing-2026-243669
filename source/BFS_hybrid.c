@@ -89,15 +89,13 @@ int distributed_bfs(
             //if (rank == 0) printf("using %d threads\n", omp_get_num_threads());
             int *local_send = calloc(p, sizeof(int));
 
-            #pragma omp for schedule(static)
+            #pragma omp for schedule(guided, 128) nowait
             for (node_t i = 0; i < g.n_vertices; i++) {
                 if (!bitset_test(&frontier, i)) continue;
 
-                node_t start = g.row_ptr[i] - local_edges;
-                node_t end   = g.row_ptr[i+1] - local_edges;
-                tmp_edges += end - start;
+                tmp_edges += g.row_ptr[i+1] - g.row_ptr[i];
 
-                for (node_t e = start; e < end; e++) {
+                for (edge_t e = g.row_ptr[i] - local_edges; e < g.row_ptr[i+1] - local_edges; e++) {
                     node_t v = g.col_idx[e];
                     if (bitset_test(&visited, v)) continue;
                     int owner = v / block_size;
@@ -114,19 +112,18 @@ int distributed_bfs(
         }
         
         // Allocate send_buf based on calculated send_counts -> avoiding over allocation of n_edges for all ranks...
-        // still an over-estimation: we're counting more than one times the same vertex, 
-        // even it in the end we're going to send only one edge for that outgoing vertex
+        // still an over-estimation: we may count multiple times the same vertex
         for (int i = 0; i < p; i++) {
             send_buf[i] = malloc(send_counts[i] * sizeof(Edge));
             send_counts[i] = 0; // Reset send_counts for reuse in the next loop 
         }
 
         // Populate send_buf with edges to be sent
-    // Parallelizing this loop appeared to be not worth since the multiple contentions on
+    // Parallelizing this loop appeared to be not worthy because of the multiple contentions on
     // visited bitset but most importantly the allocation of send_buf which would have to be subject of a reduction (one for each rank)
         for (node_t i = 0; i < g.n_vertices; i++) {
             if(bitset_test(&frontier, i)) {
-                for (node_t e = g.row_ptr[i] - local_edges; e < g.row_ptr[i + 1] - local_edges; e++) {
+                for (edge_t e = g.row_ptr[i] - local_edges; e < g.row_ptr[i + 1] - local_edges; e++) {
                     node_t v = g.col_idx[e];            // neighbor of node in frontier (global)
                     if (bitset_test(&visited, v) == 1) {continue;}
                     bitset_set(&visited, v);
@@ -191,7 +188,9 @@ int distributed_bfs(
         bitset_clear(&frontier);
         
         int th_frontier_size = 0;
-        #pragma omp parallel for reduction(+:th_frontier_size)
+    // the parellalization here is trivial if not for the race conditions on both distance vector and the frontier
+    // which can be atomic, implying high contention on high degree vertices
+        #pragma omp parallel for reduction(+:th_frontier_size) schedule(static)
         for (int i = 0; i < total_recv; i++) {
             Edge e = recv_buf[i];
             if (e.dst < local_start || e.dst >= local_start + g.n_vertices) {

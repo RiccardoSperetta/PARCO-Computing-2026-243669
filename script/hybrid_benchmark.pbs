@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=0:45:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=4:ncpus=32:mpiprocs=4:mem=32gb
+#PBS -l select=4:ncpus=32:mpiprocs=0:mem=32gb
 # In order to maximize the inter-node distribution
 #PBS -l place=scatter
 
@@ -70,7 +70,7 @@ for graph in data/csr/*.bin; do
 
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $adjusted --hostfile $PBS_NODEFILE \
-            --map-by ppr:4:node --bind-to core \
+            --map-by socket:PE=8 --bind-to core \
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${np}
         echo "======== $np run is OVER ========"
@@ -94,7 +94,7 @@ for graph in data/csr/kronecker*.bin; do
     fi
 
     mpirun -np $adjusted --hostfile $PBS_NODEFILE \
-            --map-by ppr:4:node --bind-to core \
+            --map-by socket:PE=8 --bind-to core \
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${number}
     echo "[ DONE ${graph} ]"

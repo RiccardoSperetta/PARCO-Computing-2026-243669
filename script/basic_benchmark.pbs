@@ -76,7 +76,7 @@ for graph in data/csr/kronecker*.bin; do
     echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
     # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
-    if [[ -f "results/weak_scaling/basic${np}.txt" ]]; then
+    if [[ -f "results/weak_scaling/basic${number}.txt" ]]; then
         echo "already done, skip"
         continue
     fi

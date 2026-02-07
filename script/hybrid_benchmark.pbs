@@ -88,7 +88,7 @@ for graph in data/csr/kronecker*.bin; do
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
     # since we're using 8 cores per MPI process:
     adjusted=$((number/8))
-    if [[ -f "results/weak_scaling/hybrid${np}.txt" ]]; then
+    if [[ -f "results/weak_scaling/hybrid${number}.txt" ]]; then
         echo "already done, skip"
         continue
     fi

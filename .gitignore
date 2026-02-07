@@ -1,6 +1,7 @@
 data/raw/*
 data/csr/*
 results/*
+plots/*
 
 !**/.gitkeep
 
@@ -10,4 +11,5 @@ results/*
 .clangd
 *.tmp
 .vscode/
-venv/
+.venv/*
+script/plotting/__pycache__/

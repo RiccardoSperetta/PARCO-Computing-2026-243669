@@ -57,16 +57,17 @@ for graph in data/csr/*.bin; do
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with hybrid BFS ]"
     for np in 8 16 32 64 128; do
-        # if the results file already exists: skip
-        if [[ -f "${dir}/hybrid${np}" ]]; then
-            echo "already done, skip"
-            continue
-        fi
-
         # since we're using 8 cores per MPI process:
         adjusted=$((np/8))
 
         echo "Running with $adjusted processes - with a total of $np cores"
+        
+        # if the results file already exists: skip
+        if [[ -f "${dir}/hybrid${np}.txt" ]]; then
+            echo "already done, skip"
+            continue
+        fi
+
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $adjusted --hostfile $PBS_NODEFILE \
             --map-by ppr:4:node --bind-to core \
@@ -81,17 +82,17 @@ done
 
 # WEAK SCALING
 for graph in data/csr/kronecker*.bin; do
+    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
+
     # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
     # since we're using 8 cores per MPI process:
     adjusted=$((number/8))
-    if [[ -f "results/weak_scaling/hybrid${np}" ]]; then
+    if [[ -f "results/weak_scaling/hybrid${np}.txt" ]]; then
         echo "already done, skip"
         continue
     fi
 
-    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
-    echo ""
     mpirun -np $adjusted --hostfile $PBS_NODEFILE \
             --map-by ppr:4:node --bind-to core \
             --report-bindings \

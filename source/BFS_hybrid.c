@@ -305,8 +305,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (rank == 0) printf("using %d OpenMP threads per rank\n", omp_get_max_threads());
-
     const char *filename = argv[1];
     const char *run_specs = argv[2];
     const char *last_slash = strrchr(filename, '/');
@@ -322,6 +320,8 @@ int main(int argc, char **argv) {
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
+
+    printf("Rank %d using %d OpenMP threads\n", rank, omp_get_max_threads());
 
     CSR graph;
     graph.row_ptr = NULL;

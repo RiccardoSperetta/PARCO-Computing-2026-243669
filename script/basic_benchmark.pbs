@@ -9,7 +9,7 @@
 # Set the maximum wall time
 #PBS -l walltime=0:20:00
 # Number of nodes, cpus, mpi processors and amount of memory
-#PBS -l select=4:ncpus=32:mem=32gb
+#PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
 # In order to maximize the inter-node distribution
 #PBS -l place=scatter
 
@@ -52,15 +52,15 @@ for graph in data/csr/*.bin; do
     # going from 1 to 128 MPI processes
     echo "[ BENCHMARKING ${graph} with basic BFS ]"
     for np in 1 2 4 8 16 32 64 128; do
+        echo "Running with $np processes"
         # if the results file already exists: skip
         if [[ -f "${dir}/basic${np}" ]]; then
             echo "already done, skip"
             continue
         fi
 
-        echo "Running with $np processes"
         # for 64 different (randomized) search keys (repetitions inside the program)
-        mpirun -np $np \
+        mpirun -np $np --hostfile $PBS_NODEFILE \
             --map-by ppr:1:node --bind-to core \
             --report-bindings \
             ./BFS_basic.out ${graph} basic${np}
@@ -73,6 +73,7 @@ done
 
 # WEAK SCALING
 for graph in data/csr/kronecker*.bin; do
+    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
     # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
     if [[ -f "results/weak_scaling/basic${np}" ]]; then
@@ -80,9 +81,7 @@ for graph in data/csr/kronecker*.bin; do
         continue
     fi
 
-    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
-    echo ""
-    mpirun -np $number \
+    mpirun -np $number --hostfile $PBS_NODEFILE \
             --map-by ppr:1:node --bind-to core \
             --report-bindings \
             ./BFS_basic.out ${graph} basic${number}

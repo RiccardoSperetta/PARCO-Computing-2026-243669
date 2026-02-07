@@ -81,29 +81,34 @@ void compute_imbalance_metrics(
     int p;
     MPI_Comm_size(comm, &p);
 
+    // TIME per solution measurement
     double max_time = 0;
     MPI_Reduce(&local_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
     *out_time = max_time;
 
+    // COMMUNICATION TIME measurement
     double max_comm_time = 0;
     MPI_Reduce(&local_comm_time, &max_comm_time, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
     *out_comm_time = max_comm_time;
 
-    edge_t global_TE;
-    MPI_Reduce(&local_traversed_edges, &global_TE, 1, MPI_UINT64_T, MPI_SUM, 0, comm);
+    // TEPS measurement
+    edge_t global_TE = 0;
+    MPI_Allreduce(&local_traversed_edges, &global_TE, 1, MPI_UINT64_T, MPI_SUM, comm);
+    //graphs are undirected -> we are traversing the same edge twice, following the Graph500 standard
+    //(ignoring eventual self loops)
+    global_TE /= 2;
     *TEPS = (double)global_TE / max_time; 
 
-    edge_t global_sum;
-    MPI_Allreduce(&local_traversed_edges, &global_sum, 1, MPI_UINT64_T, MPI_SUM, comm);
+    // MAX-OVER-MEAN measurement = how bigger than the average is the largest amount of edges traversed by a rank?
+    double mean = (double)global_TE / (double)p;
 
-    double mean = (double)global_sum / (double)p;
-
-    edge_t global_max;
-    MPI_Allreduce(&local_traversed_edges, &global_max, 1, MPI_UINT64_T, MPI_MAX, comm);
+    edge_t global_max = 0;
+    MPI_Reduce(&local_traversed_edges, &global_max, 1, MPI_UINT64_T, MPI_MAX, 0, comm);
 
     double max_over_mean = (mean > 0.0) ? (double)global_max / mean : -1.0;
+    *out_max_over_mean = max_over_mean;
 
-    // CV computation (same as above)
+    // CV measurement = shows the relative variability = how large the spread is compared to the average value
     double diff = (double)local_traversed_edges - mean;
     double local_sq = diff * diff;
     double global_sq_sum;
@@ -113,7 +118,6 @@ void compute_imbalance_metrics(
     double cv = (mean > 0.0) ? stddev / mean : -1.0;
 
     *out_cv = cv;
-    *out_max_over_mean = max_over_mean;
 }
 
 

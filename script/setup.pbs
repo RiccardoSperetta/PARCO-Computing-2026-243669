@@ -23,21 +23,22 @@ cd $PBS_O_WORKDIR
 
 make
 
-scale=20
+export OMP_NUM_THREADS=4
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+
+scale=22
 # generate with R-MAT all the needed graphs
 for np in 8 16 32 64 128; do
     if [ -f "data/raw/kronecker$np.txt" ]; then
         echo "kronecker$np already exists, skipping..."
+        scale=$((scale+1))
         continue
     fi
     echo "generating graph with scale $scale and edge factor 16"
     ./generator.out $scale 16 $np
     scale=$((scale+1))
 done
-
-export OMP_NUM_THREADS=4
-export OMP_PROC_BIND=close
-export OMP_PLACES=cores
 
 # convert all .txt graphs into CSR
 ./script/build_list.sh

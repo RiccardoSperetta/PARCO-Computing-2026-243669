@@ -18,7 +18,7 @@ void bitset_free(bitset_t *bs);
 //Sets all bits to 0
 void bitset_clear(bitset_t *bs);
 
-//Atomically sets the bit of a bitset to 1
+//Sets the bit of a bitset to 1
 static inline void bitset_set(bitset_t *bs, size_t v) {
     size_t word = v >> 6;          // v / 64 (2^6)
     size_t bit  = v & 63;          // v % 64
@@ -26,12 +26,12 @@ static inline void bitset_set(bitset_t *bs, size_t v) {
 }
 
 //Atomically sets the bit of a bitset to 1
-static inline void bitset_set_atomic(bitset_t *bs, size_t bit) {
-    size_t word = bit / 64;
-    size_t offset = bit % 64;
-    uint64_t mask = (1ULL << offset);
+static inline void bitset_set_atomic(bitset_t *bs, size_t v) {
+    size_t word = v >> 6;          
+    size_t bit  = v & 63;         
+    uint64_t mask = (1ULL << bit);
     
-    __atomic_fetch_or(&bs->bits[word], mask, __ATOMIC_RELAXED); //exat same thing of line 25
+    __atomic_fetch_or(&bs->bits[word], mask, __ATOMIC_RELAXED); //exat same thing of line 25, but done atomically
 }
 
 //Returns value of bit indicated by 'v' as if the bitset was an array of bits

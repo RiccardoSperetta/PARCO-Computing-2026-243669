@@ -59,15 +59,16 @@ for graph in data/csr/*.bin; do
     for np in 8 16 32 64 128; do
         # if the results file already exists: skip
         if [[ -f "${dir}/hybrid${np}" ]]; then
+            echo "already done, skip"
             continue
         fi
 
         # since we're using 8 cores per MPI process:
         adjusted=$((np/8))
 
-        echo "Running with $np processes"
+        echo "Running with $adjusted processes - with a total of $np cores"
         # for 64 different (randomized) search keys (repetitions inside the program)
-        mpirun -np $np --hostfile $PBS_NODEFILE \
+        mpirun -np $adjusted --hostfile $PBS_NODEFILE \
             --map-by ppr:4:node --bind-to core \
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${np}
@@ -85,6 +86,7 @@ for graph in data/csr/kronecker*.bin; do
     # since we're using 8 cores per MPI process:
     adjusted=$((number/8))
     if [[ -f "results/weak_scaling/hybrid${np}" ]]; then
+        echo "already done, skip"
         continue
     fi
 

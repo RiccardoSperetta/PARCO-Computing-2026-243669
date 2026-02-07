@@ -2,7 +2,7 @@
 set -e
 
 for dir in results/*; do
-    rm -rf "$dir"/*
+    rm -rf "$dir"/$1*
 
 done
 

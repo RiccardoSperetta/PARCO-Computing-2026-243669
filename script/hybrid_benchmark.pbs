@@ -70,7 +70,7 @@ for graph in data/csr/*.bin; do
 
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $adjusted --hostfile $PBS_NODEFILE \
-            --map-by socket:PE=8 --bind-to core \
+            --map-by node:PE=8 --bind-to core \
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${np}
         echo "======== $np run is OVER ========"
@@ -94,7 +94,7 @@ for graph in data/csr/kronecker*.bin; do
     fi
 
     mpirun -np $adjusted --hostfile $PBS_NODEFILE \
-            --map-by socket:PE=8 --bind-to core \
+            --map-by node:PE=8 --bind-to core \
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${number}
     echo "[ DONE ${graph} ]"

@@ -11,7 +11,7 @@
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
 # In order to maximize the inter-node distribution
-#PBS -l place=scatter
+#PBS -l place=pack
 
 # Modules for python and MPI
 module load GCC/11.2.0
@@ -61,7 +61,7 @@ for graph in data/csr/*.bin; do
 
         # for 64 different (randomized) search keys (repetitions inside the program)
         mpirun -np $np --hostfile $PBS_NODEFILE \
-            --map-by node --bind-to core \
+            --map-by core --bind-to core \
             --report-bindings \
             ./BFS_basic.out ${graph} basic${np}
         echo "======== $np run is OVER ========"
@@ -73,16 +73,18 @@ done
 
 # WEAK SCALING
 for graph in data/csr/kronecker*.bin; do
-    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
     # Extract the number in the filename
     number=$(basename "${graph}" | sed -E 's/kronecker([0-9]+)\.bin/\1/')
+
+    echo "[ BENCHMARKING Kronecker generated graph for ${number} cores (with ${number} cores) ]"
+
     if [[ -f "results/weak_scaling/basic${number}.txt" ]]; then
         echo "already done, skip"
         continue
     fi
 
     mpirun -np $number --hostfile $PBS_NODEFILE \
-            --map-by node --bind-to core \
+            --map-by core --bind-to core \
             --report-bindings \
             ./BFS_basic.out ${graph} basic${number}
     echo "[ DONE ${graph} ]"

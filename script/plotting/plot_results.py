@@ -5,7 +5,20 @@ import numpy as np
 from pathlib import Path
 
 from loaders import load_all_results
-from summaries import compute_teps_summary   # assuming this exists from previous step
+from summaries import compute_teps_harmonic, compute_times_p90   # assuming this exists from previous step
+
+# A few constants used in graphs
+VARIANT_COLORS = {
+    'basic':  '#1f77b4',   
+    'hybrid': "#f02525", 
+}
+
+TIME_COLORS = {
+    'total': '#ffcc00',     
+    'comm':  '#9932cc',     
+}
+
+BAR_WIDTH = 0.35              # width of each bar in grouped bar plot
 
 plt.style.use("seaborn-v0_8-whitegrid")
 
@@ -21,14 +34,16 @@ def save_plot(name: str, fig=None):
     print(f"Saved → {path}")
     plt.close(fig)
 
-
+# ==================================================================================================
+# TEPS comparison
+# ==================================================================================================
 def plot_teps_comparison():
     df = load_all_results(results_root="./results")
     
     # Safety filter: only positive TEPS
     df = df[df['TEPS'] > 0].copy()
     
-    summary = compute_teps_summary(df)
+    summary = compute_teps_harmonic(df)
     
     # Get sorted unique graphs
     graphs = sorted(summary['graph'].unique())
@@ -55,16 +70,17 @@ def plot_teps_comparison():
             
             label = f"{variant.capitalize()}"
             ax.plot(cores, teps, marker='o', linestyle='-', linewidth=1.9,
-                    markersize=7, label=label)
+                markersize=7, label=label,
+                color=VARIANT_COLORS.get(variant, 'gray'))
         
-        # X-axis: log scale but show clean powers-of-two labels
+        # X-axis: CORES
         ax.set_xscale('log', base=2)
         unique_cores = sorted(data['cores'].unique())
         ax.set_xticks(unique_cores)
         ax.set_xticklabels([str(c) for c in unique_cores])
         ax.tick_params(axis='x', rotation=0)
         
-        # Y-axis improvements
+        # Y-axis: TEPS
         ax.set_ylabel("TEPS (harmonic mean)", fontsize=12)
         # Add scientific notation hint in title / label area if needed
         # Most people prefer just clean number + unit, but we can force sci notation:
@@ -72,8 +88,9 @@ def plot_teps_comparison():
         # This puts e.g. ×10⁸ in the top-left-ish area automatically
         
         ax.set_xlabel("Number of cores", fontsize=12)
-        ax.set_title(f"TEPS comparison – {graph_name}", fontsize=13, pad=12)
-        
+        title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
+        ax.set_title(f"TEPS comparison - {title_name}", fontsize=13, pad=12)        
+
         ax.legend(frameon=True, fontsize=10.5)
         ax.grid(True, which="major", alpha=0.5)
         ax.grid(True, which="minor", alpha=0.15, linestyle=":")
@@ -81,9 +98,71 @@ def plot_teps_comparison():
         save_plot(f"TEPS_comparison_{graph_name}")
 
 
+# ==================================================================================================
+# TIME comparison
+# ==================================================================================================
+
+
+
+# ==================================================================================================
+# TOTAL vs COMMUNICATION time comparison
+# ==================================================================================================
+def plot_times_p90_bars():
+    df = load_all_results(results_root="./results")
+    df = df[df['total_time'] > 0].copy()
+    
+    summary = compute_times_p90(df)
+    
+    graphs = sorted(summary['graph'].unique())
+    
+    for graph_name in graphs:
+        data = summary[summary['graph'] == graph_name].copy()
+        if data.empty:
+            continue
+        
+        data = data.sort_values('cores')
+        cores_list = sorted(data['cores'].unique())
+        
+        fig, ax = plt.subplots(figsize=(11, 6))
+        
+        x_positions = np.arange(len(cores_list))  # 0,1,2,... for each core count
+        
+        for i, variant in enumerate(['basic', 'hybrid']):
+            sub = data[data['variant'] == variant]
+            if sub.empty:
+                continue
+            
+            # map cores to integer positions
+            pos = [x_positions[list(cores_list).index(c)] + i*BAR_WIDTH for c in sub['cores']]
+            
+            # total time bars (background)
+            ax.bar(pos, sub['total_time_p90'], width=BAR_WIDTH,
+                   color=TIME_COLORS['total'], label=f"{variant.capitalize()} total" if i==0 else "",
+                   edgecolor='black', linewidth=0.8)
+            
+            # comm time bars (on top / overlapping visually, but shifted)
+            ax.bar(pos, sub['comm_time_p90'], width=BAR_WIDTH,
+                   color=TIME_COLORS['comm'], label=f"{variant.capitalize()} comm" if i==0 else "",
+                   edgecolor='black', linewidth=0.8, alpha=0.95)
+        
+        # clean x-ticks
+        ax.set_xticks(x_positions + BAR_WIDTH/2)
+        ax.set_xticklabels([str(c) for c in cores_list])
+        
+        ax.set_xlabel("Number of cores")
+        ax.set_ylabel("90th percentile time (s)")
+        title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
+        ax.set_title(f"p90 Runtime Breakdown – {title_name}", fontsize=13, pad=12)
+        
+        ax.legend(frameon=True, fontsize=10, ncol=2)
+        ax.grid(True, axis='y', alpha=0.35, linestyle="--")
+        
+        save_plot(f"runtime_p90_bars_{graph_name}")
+
+
 def main():
     plot_teps_comparison()
-
+    plot_times_p90_bars()
 
 if __name__ == "__main__":
     main()

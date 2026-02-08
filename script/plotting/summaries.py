@@ -9,20 +9,26 @@ def harmonic_mean(x):
     return len(x) / np.sum(1.0 / x)
 
 
-def compute_teps_summary(df: pd.DataFrame) -> pd.DataFrame:
+def compute_teps_harmonic(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Group by graph + variant + cores and compute:
-    - harmonic mean of TEPS
-    - arithmetic mean of total_time (for reference)
-    - count of runs (should be ~64)
+    harmonic mean per group (= same graph, method and number of cores)
     """
-    grouped = df.groupby(['graph', 'variant', 'cores'])
+    return (
+        df.groupby(['graph', 'variant', 'cores'])['TEPS']
+          .agg(harmonic_mean)
+          .reset_index(name='TEPS_harmonic')
+    )
 
-    summary = grouped.agg(
-        TEPS_harmonic=('TEPS', harmonic_mean),
-        TEPS_arithmetic=('TEPS', 'mean'),     # just for comparison / debugging
-        total_time_mean=('total_time', 'mean'),
-        count=('TEPS', 'count')
-    ).reset_index()
 
-    return summary
+def compute_times_p90(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Computes 90th percentile for both total_time and comm_time per group
+    """
+    return (
+        df.groupby(['graph', 'variant', 'cores'])
+          .agg(
+              total_time_p90=('total_time', lambda x: x.quantile(0.90)),
+              comm_time_p90=('comm_time',   lambda x: x.quantile(0.90)),
+          )
+          .reset_index()
+    )

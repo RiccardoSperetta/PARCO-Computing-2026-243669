@@ -36,7 +36,7 @@ def load_all_results(results_root: str = "./results") -> pd.DataFrame:
 
         # loop over every .txt file in this graph folder
         for txt_file in graph_folder.glob("*.txt"):
-            stem = txt_file.stem  # "basic16", "hybrid4", ...
+            stem = txt_file.stem  # "basic16", "hybrid64", ...
 
             if stem.startswith("basic"):
                 variant = "basic"

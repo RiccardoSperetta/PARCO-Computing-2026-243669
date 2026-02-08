@@ -74,7 +74,7 @@ for graph in data/csr/*.bin; do
             --report-bindings \
             ./BFS_hybrid.out ${graph} hybrid${np}
         echo "======== $np run is OVER ========"
-        echo "======== $np run is OVER ========" >> hybrid.e
+        echo "======== $np run is OVER ========" >&2
         echo ""
     done
     echo "[ DONE ${graph} ]"

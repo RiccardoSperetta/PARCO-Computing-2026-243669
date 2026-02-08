@@ -65,7 +65,7 @@ for graph in data/csr/*.bin; do
             --report-bindings \
             ./BFS_basic.out ${graph} basic${np}
         echo "======== $np run is OVER ========"
-        echo "======== $np run is OVER ========" >> basic.e
+        echo "======== $np run is OVER ========" >&2
         echo ""
     done
     echo "[ DONE ${graph} ]"

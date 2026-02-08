@@ -11,7 +11,7 @@
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=4:ncpus=32:mpiprocs=32:mem=32gb
 # In order to maximize the inter-node distribution
-#PBS -l place=pack
+#PBS -l place=scatter
 
 # Modules for python and MPI
 module load GCC/11.2.0

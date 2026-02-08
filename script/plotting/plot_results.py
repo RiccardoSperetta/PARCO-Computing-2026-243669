@@ -101,7 +101,54 @@ def plot_teps_comparison():
 # ==================================================================================================
 # TIME comparison
 # ==================================================================================================
-
+def plot_total_time_p90():
+    df = load_all_results(results_root="./results")
+    
+    # Keep only valid positive times
+    df = df[df['total_time'] > 0].copy()
+    
+    summary = compute_times_p90(df)
+    
+    graphs = sorted(summary['graph'].unique())
+    
+    for graph_name in graphs:
+        data = summary[summary['graph'] == graph_name].copy()
+        if data.empty:
+            continue
+            
+        data = data.sort_values('cores')
+        
+        fig, ax = plt.subplots(figsize=(10, 5.8))
+        
+        for variant in ['basic', 'hybrid']:
+            sub = data[data['variant'] == variant]
+            if sub.empty:
+                continue
+                
+            cores = sub['cores']
+            time_p90 = sub['total_time_p90']
+            
+            label = f"{variant.capitalize()}"
+            ax.plot(cores, time_p90, marker='o', linestyle='-', linewidth=1.9,
+                    markersize=7, label=label,
+                    color=VARIANT_COLORS.get(variant, 'gray'))
+        
+        ax.set_xscale('log', base=2)
+        unique_cores = sorted(data['cores'].unique())
+        ax.set_xticks(unique_cores)
+        ax.set_xticklabels([str(c) for c in unique_cores])
+        ax.tick_params(axis='x', rotation=0)
+        
+        ax.set_yscale('log')   # ← usually very useful for time plots
+        ax.set_xlabel("Number of cores", fontsize=12)
+        ax.set_ylabel("Total time per solution – p90 (s)", fontsize=12)
+        ax.set_title(f"Runtime comparison (p90) – {graph_name}", fontsize=13, pad=12)
+        
+        ax.legend(frameon=True, fontsize=10.5)
+        ax.grid(True, which="major", alpha=0.5)
+        ax.grid(True, which="minor", alpha=0.15, linestyle=":")
+        
+        save_plot(f"runtime_p90_{graph_name}")
 
 
 # ==================================================================================================
@@ -162,6 +209,7 @@ def plot_times_p90_bars():
 
 def main():
     plot_teps_comparison()
+    plot_total_time_p90()
     plot_times_p90_bars()
 
 if __name__ == "__main__":

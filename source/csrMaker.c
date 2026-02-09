@@ -219,13 +219,10 @@ int main(int argc, char **argv) {
 
     int directed = atoi(argv[2]);
     int shuffle = atoi(argv[3]);
-    
-    // Set number of OpenMP threads (or use OMP_NUM_THREADS env variable)
-    // omp_set_num_threads(16);
-    
+        
     printf("Using %d OpenMP threads\n", omp_get_max_threads());
     
-    // Convert edge list to CSR (1 = directed, 0 = undirected)
+    // Convert edge list to CSR (1 = directed - leave as it is, 0 = undirected)
     CSR *graph = edgelist_to_csr(argv[1], directed, shuffle);
     
     if (graph) {
@@ -242,7 +239,7 @@ int main(int argc, char **argv) {
         int basename_len = dot ? (dot - basename) : strlen(basename);
 
         if (shuffle) {
-            snprintf(output_path, sizeof(output_path), "data/csr/%.*s_shuffled.bin", basename_len, basename);
+            snprintf(output_path, sizeof(output_path), "data/csr/shuffled_%.*s.bin", basename_len, basename);
         } else {
             snprintf(output_path, sizeof(output_path), "data/csr/%.*s.bin", basename_len, basename);
         }

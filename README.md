@@ -21,7 +21,7 @@
 ## 1. Project Overview
 
 Author: Riccardo, Speretta 243669 riccardo.speretta@studenti.unitn.it
-This project constitutes all the necessary tools to reproduce the data used in the final project for the Parallel Computing 2025/2026 course at unitn.
+This project constitutes the final project for the Parallel Computing 2025/2026 course at unitn.
 
 ---
 ## 2. Repo layout
@@ -29,6 +29,8 @@ This project constitutes all the necessary tools to reproduce the data used in t
 ```bash
 
 ├── README.md
+
+├── Makefile
 
 ├── src/        # C/C++ source code
 
@@ -45,54 +47,47 @@ This project constitutes all the necessary tools to reproduce the data used in t
 ```
 
 #### src
-- `matrix_processing.c`
-  = taken the name of a matrix in input this program will look for it in the `data/raw` folder(as `matrix_name.mtx`, and if it's present it will translate it into the CSR format, specifically it will create 3 binary files inside of `data/processed/matrix_name`:
-    1) `rowptr.bin` = (1 long) = number of rows (ROWS), followed by the list of pointers to the start of each row in the columns array (ROWS+1 longs)
+- `BFS_basic.c`
+  = algorithm for plain MPI distributed BFS implementation
 
-    2) `col.bin` = (1 long) = number of columns(COLS), followed by the list of column indexes (nnz longs)
+- `BFS_hybrid.c`
+  = algorithm for hybrid MPI+OpenMP distributed BFS implementation
+  (poor modularity between the two programs can be stressing for the reader, but they are basically a very similar variation of the same program)
 
-    3) `val.bin` = (1 long) = nnz(non zero values), followed by the list of values (nnz doubles) contained in the matrix
+- `csrMaker.c`
+  = responsible for building the correct CSR convertion of the txt edge list of the graph provided in data/raw, and placing it into data/csr
 
-- `SpMV_iter.c`
-  = taken the name of a matrix in input this program will look for it in the `data/processed` folder, expecting the previous program to be run already.
-  It will then perform the standard matrix/vector multiplication with CSR format, including the parallel openMP `#pragma` to allow for parallelization when compiled with `-fopenmp`
-  The multiplication is performed 11 times in a row: the first run is to warm up the cache, the following are actually registered as values and printed
+- `graph_utils.h` / `graph_utils.c`
+  = helper functions for the previous programs, including a parallel sorting, the writing of a BFS runs into its result file and the validate function (a simplified version of the Graph500 one)
 
-(*both of the previous programs include debugging sections, where extra prints are provided when compiled with the `-DDEBUG` flag*)
+- `bitset.h` / `bitset.c`
+  = custom bitsets used for visited vertices list and frontier in both BFS algorithms, including atomic functionality
 
-- `timer.h`
-  = defines a simple function for time measurements
-  based on the POSIX `gettimeofday()` function, which provides wall-clock time with microsecond resolution. The timer records the elapsed real time (including OS overhead and thread scheduling effects). Time values are stored as doubles in milliseconds, computed as `t.tv_sec + t.tv_usec / 1e6`. This ensures consistent and comparable timing across all experiments
+#### generator
+Directly coming from the Graph500 open source implementation: https://github.com/graph500/graph500
+in `generator.c` a small main has been added in order to generate the desired graphs
 
 #### scripts
 *keep in mind*: ALL scripts and executables are expected to be run inside the root folder of the project. 
 
-- `matrix_list.sh`
-    = the list of all the matrices that we intend using
-    it's shared among the other scripts, so during a job submission it's best not to modify this file at all
+- `SNAP_list.sh`
+    = simple list of SNAP graphs that one intends downloading, this list maps if a graph is already undirected or not
 
-- `download_matrix.sh`
-    = given the name and group of the matrix, this script will download and unzip the corresponding matrix from https://sparse.tamu.edu/, storing it in `data/raw`
+- `setup.pbs`
+    = job intended to be submitted first, in order to prepare the correct ambient for the execution of the BFS algorithms
 
-- `download_list.sh`
-    = calls the previous script for all matrices in the list
+- `build_list.sh`
+    = calls the `csrMaker.out` executable on all .txt files that need to be translated into CSR
 
-- `pre_process_matrix.sh`
-    = given the name of the matrix, calls `matrix_processing.c` on the downloaded `.mtx` matrix file, fails if file is missing.
+- `basic_benchmark.pbs`
+    = allocates resources and call for the `BFS_basic.out` executable over a growing amount of cores, correctly adapting to real-world graphs and generated onese (results are directed to the correct folder), and already processed graps are not processed again
 
-- `pre_process_list.sh`
-    = calls the previous script for all matrices in the list
+- `hybrid_benchmark.pbs`
+    = same thing of the previous script but for `BFS_hybrid.out`
 
-- `measure_matrix.sh`
-    = given the name of a matrix, performs the actual benchmarking with `SpMV_iter.c`, changing all environment variables iteratively for all possible configurations (of optimization levels for sequential code and thread count and omp schedules), performing 10 execution for time measurements, and 10 other separate measurements for cache performacne. 
+- `clear_results.sh`
+    = quick way to erase contents in the `results` folder, accept parameters such as `basic` or `hybrid` for selected delition
 
-- `measure_list.sh`
-    = calls the previous script for all matrices in the list
-
-- `batch.pbs`
-    = the pbs script intended for a cluster job submission
-    -> includes the execution of all the previous `*_list.sh` scripts in order to build an easy to understand and modular pipeline for benchmarking
-    (if matrices are already present or processed, they wont be downloaded/processed again)
 
 each script will provide helpful prints to allow the user understand the phase reached by the scripts in their execution.
   
@@ -110,7 +105,7 @@ nested folder dedicated to python scripts responsible for plotting:
 #### results
 (its contents, given their sizes, are not included by default in the repo, but will be populated by the previous scripts)
 
-for each graph, like for *data/csr/name*, there will be one directory, containing:
+for each graph, there will be one directory, containing a set of txt files:
 - **basic**x = pure MPI implementation runs on x cores
 
 - **hybrid**x = hybrid MPI+OpenMP implementation runs on x cores
@@ -135,6 +130,8 @@ While for mpicc is `OpenMPI/4.1.1-GCC-11.2.0`
 
 The `make` command, calling the `Makefile` will be enough for compiling all necessary C programs. 
 As for the scripts these executables must be run from the root folder of the project to work correctly.
+
+A `DEBUG` flag exists for all the 3 "standalone" `.c` files in `src`, which allow for extra printings during execution for a better understanding of what's happening.
 
 ---
 ## 4. Running the code

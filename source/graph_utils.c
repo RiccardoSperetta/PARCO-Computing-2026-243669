@@ -4,8 +4,6 @@
 #include <omp.h>
 #include <stdio.h>
 
-// TODO: better commenting
-
 MPI_Datatype MPI_EDGE;  // definition (storage) here
 
 void init_mpi_datatypes(void) {

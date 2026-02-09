@@ -103,8 +103,6 @@ def plot_teps_comparison():
 # ==================================================================================================
 def plot_total_time_p90():
     df = load_all_results(results_root="./results")
-    
-    # Keep only valid positive times
     df = df[df['total_time'] > 0].copy()
     
     summary = compute_times_p90(df)
@@ -139,10 +137,18 @@ def plot_total_time_p90():
         ax.set_xticklabels([str(c) for c in unique_cores])
         ax.tick_params(axis='x', rotation=0)
         
-        ax.set_yscale('log')   # ← usually very useful for time plots
+        # Log scale but show plain numbers (seconds)
+        ax.set_yscale('log')
+        ax.yaxis.set_major_formatter(plt.ScalarFormatter())
+        ax.yaxis.set_minor_formatter(plt.ScalarFormatter())   # also clean minor ticks
+        ax.ticklabel_format(axis='y', style='plain', useOffset=False)
+        
+        # Consistency with your other plots
+        title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
+        
         ax.set_xlabel("Number of cores", fontsize=12)
         ax.set_ylabel("Total time per solution – p90 (s)", fontsize=12)
-        ax.set_title(f"Runtime comparison (p90) – {graph_name}", fontsize=13, pad=12)
+        ax.set_title(f"Runtime comparison (p90) – {title_name}", fontsize=13, pad=12)
         
         ax.legend(frameon=True, fontsize=10.5)
         ax.grid(True, which="major", alpha=0.5)
@@ -199,13 +205,16 @@ def plot_times_p90_bars():
         ax.set_xlabel("Number of cores")
         ax.set_ylabel("90th percentile time (s)")
         title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
-        ax.set_title(f"p90 Runtime Breakdown – {title_name}", fontsize=13, pad=12)
+        ax.set_title(f"p90 Runtime Breakdown - {title_name}", fontsize=13, pad=12)
         
         ax.legend(frameon=True, fontsize=10, ncol=2)
         ax.grid(True, axis='y', alpha=0.35, linestyle="--")
         
         save_plot(f"runtime_p90_bars_{graph_name}")
 
+# ==================================================================================================
+# MAX OVER MEAN traversed edges
+# ==================================================================================================
 def plot_max_over_mean():
     df = load_all_results(results_root="./results")
     
@@ -257,7 +266,9 @@ def plot_max_over_mean():
         
         save_plot(f"load_imbalance_max_over_mean_{graph_name}")
 
-
+# ==================================================================================================
+# CV of traversed edges 
+# ==================================================================================================
 def plot_cv():
     df = load_all_results(results_root="./results")
     

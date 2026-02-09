@@ -9,17 +9,13 @@ for file in data/raw/*; do
     graph=$(basename "$file" .txt)
     csr_file="data/csr/${graph}.bin"
     directed=0 #assuming default edge lists need to be doubled (for each a->b add also b->a)
-    shuffle=1 #can be choosen, usually doesn't impact on performance significantly
-    shuffled_csr_file="data/csr/shuffled_${graph}.bin"
+    shuffle=0 #can be choosen, shuffling usually produces slightly worse performance
 
     if [ ! -f "${file}" ]; then
         echo "Error: ${file} not found"
         continue
     fi
-    if [ "${shuffle}" -eq 1 ] && [ -f "${shuffled_csr_file}" ]; then
-        echo "Shuffled CSR for ${file} has already been built"
-        continue
-    elif [ "${shuffle}" -eq 0 ] && [ -f "${csr_file}" ]; then
+    if [ -f "${csr_file}" ]; then
         echo "CSR for ${file} has already been built"
         continue
     fi
@@ -31,11 +27,7 @@ for file in data/raw/*; do
     ./csrMaker.out ${file} ${directed} ${shuffle}
 
     if [ $? -eq 0 ]; then
-        if [ "${shuffle}" -eq 1 ]; then
-            echo "Success: CSR built in ${shuffled_csr_file}"
-        else
-            echo "Success: CSR built in ${csr_file}"
-        fi
+        echo "Success: CSR built in ${csr_file}"
     else
         echo "Error: CSR construction of ${file} failed"
         exit 1
@@ -45,11 +37,7 @@ for file in data/raw/*; do
     if [[ "${graph}" == kronecker* ]]; then
         mkdir -p "results/weak_scaling"
     else
-        if [ "${shuffle}" -eq 1 ]; then
-            mkdir -p "results/shuffled_${graph}"
-        else
-            mkdir -p "results/${graph}"
-        fi
+        mkdir -p "results/${graph}"
     fi
     
 

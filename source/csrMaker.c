@@ -238,11 +238,9 @@ int main(int argc, char **argv) {
         char *dot = strrchr(basename, '.');
         int basename_len = dot ? (dot - basename) : strlen(basename);
 
-        if (shuffle) {
-            snprintf(output_path, sizeof(output_path), "data/csr/shuffled_%.*s.bin", basename_len, basename);
-        } else {
-            snprintf(output_path, sizeof(output_path), "data/csr/%.*s.bin", basename_len, basename);
-        }
+        
+        snprintf(output_path, sizeof(output_path), "data/csr/%.*s.bin", basename_len, basename);
+        
 
         // Write CSR to binary file
         FILE *out_fp = fopen(output_path, "wb");

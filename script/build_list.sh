@@ -19,7 +19,7 @@ for file in data/raw/*; do
     if [ "${shuffle}" -eq 1 ] && [ -f "${csr_file_shuffled}" ]; then
         echo "Shuffled CSR for ${file} has already been built"
         continue
-    elif [ -f "${csr_file}" ]; then
+    elif [ "${shuffle}" -eq 0 ] && [ -f "${csr_file}" ]; then
         echo "CSR for ${file} has already been built"
         continue
     fi

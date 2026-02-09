@@ -15,6 +15,7 @@ for file in data/raw/*; do
     if [ ! -f "${file}" ]; then
         echo "Error: ${file} not found"
         continue
+    fi
     if [ "${shuffle}" -eq 1 ] && [ -f "${csr_file_shuffled}" ]; then
         echo "Shuffled CSR for ${file} has already been built"
         continue

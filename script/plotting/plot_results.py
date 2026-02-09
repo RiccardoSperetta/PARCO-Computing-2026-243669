@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 
 from loaders import load_all_results
-from summaries import compute_teps_harmonic, compute_times_p90   # assuming this exists from previous step
+from summaries import compute_cv_avg, compute_max_over_mean_avg, compute_teps_harmonic, compute_times_p90   # assuming this exists from previous step
 
 # A few constants used in graphs
 VARIANT_COLORS = {
@@ -206,11 +206,113 @@ def plot_times_p90_bars():
         
         save_plot(f"runtime_p90_bars_{graph_name}")
 
+def plot_max_over_mean():
+    df = load_all_results(results_root="./results")
+    
+    # Filter valid positive values (safety, assuming >1 typical)
+    df = df[df['max_over_mean'] > 0].copy()
+    
+    summary = compute_max_over_mean_avg(df)
+    
+    graphs = sorted(summary['graph'].unique())
+    
+    for graph_name in graphs:
+        data = summary[summary['graph'] == graph_name].copy()
+        if data.empty:
+            continue
+            
+        data = data.sort_values('cores')
+        
+        fig, ax = plt.subplots(figsize=(10, 5.8))
+        
+        for variant in ['basic', 'hybrid']:
+            sub = data[data['variant'] == variant]
+            if sub.empty:
+                continue
+                
+            cores = sub['cores']
+            mom = sub['max_over_mean_avg']
+            
+            label = f"{variant.capitalize()}"
+            ax.plot(cores, mom, marker='o', linestyle='-', linewidth=1.9,
+                    markersize=7, label=label,
+                    color=VARIANT_COLORS.get(variant, 'gray'))
+        
+        ax.set_xscale('log', base=2)
+        unique_cores = sorted(data['cores'].unique())
+        ax.set_xticks(unique_cores)
+        ax.set_xticklabels([str(c) for c in unique_cores])
+        ax.tick_params(axis='x', rotation=0)
+        
+        # Y linear (ratios usually start ~1)
+        ax.set_xlabel("Number of cores", fontsize=12)
+        ax.set_ylabel("Max/Mean Load Imbalance (mean over runs)", fontsize=12)
+        
+        title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
+        ax.set_title(f"Load Imbalance (Max/Mean) – {title_name}", fontsize=13, pad=12)
+        
+        ax.legend(frameon=True, fontsize=10.5)
+        ax.grid(True, which="major", alpha=0.5)
+        ax.grid(True, which="minor", alpha=0.15, linestyle=":")
+        
+        save_plot(f"load_imbalance_max_over_mean_{graph_name}")
+
+
+def plot_cv():
+    df = load_all_results(results_root="./results")
+    
+    df = df[df['CV'] >= 0].copy()  # CV is non-negative
+    
+    summary = compute_cv_avg(df)
+    
+    graphs = sorted(summary['graph'].unique())
+    
+    for graph_name in graphs:
+        data = summary[summary['graph'] == graph_name].copy()
+        if data.empty:
+            continue
+            
+        data = data.sort_values('cores')
+        
+        fig, ax = plt.subplots(figsize=(10, 5.8))
+        
+        for variant in ['basic', 'hybrid']:
+            sub = data[data['variant'] == variant]
+            if sub.empty:
+                continue
+                
+            cores = sub['cores']
+            cv = sub['CV_avg']
+            
+            label = f"{variant.capitalize()}"
+            ax.plot(cores, cv, marker='o', linestyle='-', linewidth=1.9,
+                    markersize=7, label=label,
+                    color=VARIANT_COLORS.get(variant, 'gray'))
+        
+        ax.set_xscale('log', base=2)
+        unique_cores = sorted(data['cores'].unique())
+        ax.set_xticks(unique_cores)
+        ax.set_xticklabels([str(c) for c in unique_cores])
+        ax.tick_params(axis='x', rotation=0)
+        
+        ax.set_xlabel("Number of cores", fontsize=12)
+        ax.set_ylabel("Coefficient of Variation (mean over runs)", fontsize=12)
+        
+        title_name = "Kronecker generated" if graph_name == "weak_scaling" else graph_name
+        ax.set_title(f"Load Variation (CV) – {title_name}", fontsize=13, pad=12)
+        
+        ax.legend(frameon=True, fontsize=10.5)
+        ax.grid(True, which="major", alpha=0.5)
+        ax.grid(True, which="minor", alpha=0.15, linestyle=":")
+        
+        save_plot(f"load_variation_cv_{graph_name}")
 
 def main():
     plot_teps_comparison()
     plot_total_time_p90()
     plot_times_p90_bars()
+    plot_max_over_mean() 
+    plot_cv()              
 
 if __name__ == "__main__":
     main()

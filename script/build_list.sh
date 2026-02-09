@@ -9,9 +9,14 @@ for file in data/raw/*; do
     graph=$(basename "$file" .txt)
     csr_file="data/csr/${graph}.bin"
     directed=0 #assuming default edge lists need to be doubled (for each a->b add also b->a)
+    shuffle=0 #can be choosen, usually doesn't impact on performance significantly
+    csr_file_shuffled="data/csr/${graph}_shuffled.bin"
 
     if [ ! -f "${file}" ]; then
         echo "Error: ${file} not found"
+        continue
+    if [ "${shuffle}" -eq 1 ] && [ -f "${csr_file_shuffled}" ]; then
+        echo "Shuffled CSR for ${file} has already been built"
         continue
     elif [ -f "${csr_file}" ]; then
         echo "CSR for ${file} has already been built"
@@ -22,7 +27,7 @@ for file in data/raw/*; do
         directed=${SNAP_GRAPHS["${graph}"]}
     fi
 
-    ./csrMaker.out ${file} ${directed} 0 # - not shuffling
+    ./csrMaker.out ${file} ${directed} ${shuffled}
 
     if [ $? -eq 0 ]; then
         echo "Success: CSR built in ${csr_file}"

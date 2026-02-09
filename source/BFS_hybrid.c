@@ -120,7 +120,7 @@ int distributed_bfs(
 
         // Populate send_buf with edges to be sent
     // Parallelizing this loop appeared to be not worthy because of the multiple contentions on
-    // visited bitset but most importantly the allocation of send_buf which would have to be subject of a reduction (one for each rank)
+    // visited bitset and the inevitably over allocation of of send_buf for each thread, which would have to be subject of a reduction (one for each rank)
         for (node_t i = 0; i < g.n_vertices; i++) {
             if(bitset_test(&frontier, i)) {
                 for (edge_t e = g.row_ptr[i] - local_edges; e < g.row_ptr[i + 1] - local_edges; e++) {

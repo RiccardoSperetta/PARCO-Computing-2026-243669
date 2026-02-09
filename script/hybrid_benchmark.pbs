@@ -7,7 +7,7 @@
 # Queue name
 #PBS -q shortCPUQ
 # Set the maximum wall time
-#PBS -l walltime=0:20:00
+#PBS -l walltime=0:50:00
 # Number of nodes, cpus, mpi processors and amount of memory
 #PBS -l select=4:ncpus=32:mpiprocs=4:mem=32gb
 # In order to maximize the inter-node distribution

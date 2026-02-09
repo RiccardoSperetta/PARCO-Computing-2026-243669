@@ -83,7 +83,6 @@ CSR* edgelist_to_csr(const char *filename, int directed, int shuffle) {      // 
      * STEP 3: SHUFFLING of edges for basic load balancing 
      * ======================================================================== 
      */
-    
     printf("STEP 3: Shuffling edges...");
     if(shuffle) {
         srand(omp_get_wtime() + getpid());

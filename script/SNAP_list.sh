@@ -9,3 +9,5 @@ declare -A SNAP_GRAPHS=(
     ["as-skitter"]=0
     ["com-orkut"]=0
 )
+
+# for the chosen graphs it's always 0, but this may change depending on the source

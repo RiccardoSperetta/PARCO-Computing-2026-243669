@@ -9,7 +9,7 @@ for file in data/raw/*; do
     graph=$(basename "$file" .txt)
     csr_file="data/csr/${graph}.bin"
     directed=0 #assuming default edge lists need to be doubled (for each a->b add also b->a)
-    shuffle=0 #can be choosen, usually doesn't impact on performance significantly
+    shuffle=1 #can be choosen, usually doesn't impact on performance significantly
     csr_file_shuffled="data/csr/${graph}_shuffled.bin"
 
     if [ ! -f "${file}" ]; then
@@ -27,10 +27,14 @@ for file in data/raw/*; do
         directed=${SNAP_GRAPHS["${graph}"]}
     fi
 
-    ./csrMaker.out ${file} ${directed} ${shuffled}
+    ./csrMaker.out ${file} ${directed} ${shuffle}
 
     if [ $? -eq 0 ]; then
-        echo "Success: CSR built in ${csr_file}"
+        if [ "${shuffle}" -eq 1 ]; then
+            echo "Success: CSR built in ${csr_file_shuffled}"
+        else
+            echo "Success: CSR built in ${csr_file}"
+        fi
     else
         echo "Error: CSR construction of ${file} failed"
         exit 1
@@ -40,7 +44,11 @@ for file in data/raw/*; do
     if [[ "${graph}" == kronecker* ]]; then
         mkdir -p "results/weak_scaling"
     else
-        mkdir -p "results/${graph}"
+        if [ "${shuffle}" -eq 1 ]; then
+            mkdir -p "results/${graph}_shuffled"
+        else
+            mkdir -p "results/${graph}"
+        fi
     fi
     
 
